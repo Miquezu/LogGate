@@ -1,0 +1,61 @@
+﻿<Window x:Class="LogGate.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:LogGate"
+        Style="{StaticResource MaterialDesignWindow}"
+        mc:Ignorable="d"
+        Title="Учет времени — Сводка" Height="600" Width="1000"
+        WindowStartupLocation="CenterScreen"
+        Background="#F5F6F8">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <!-- Строка для кнопок -->
+            <RowDefinition Height="Auto"/>
+            <!-- Строка для таблицы (займет все оставшееся место) -->
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Привязываем кнопку к сгенерированной команде LoadDataCommand -->
+        <Button Grid.Row="0" 
+            Content="Прочитать файл" 
+            Command="{Binding LoadDataCommand}" 
+            Width="150" 
+            HorizontalAlignment="Left" 
+            Padding="5" 
+            Margin="0,0,0,10"/>
+
+        <!-- Привязываем таблицу к нашей коллекции DataItems -->
+        <DataGrid Grid.Row="1" 
+          ItemsSource="{Binding DataItems}" 
+          AutoGenerateColumns="False" 
+          IsReadOnly="True"
+          HeadersVisibility="Column"
+          AlternatingRowBackground="#FFF0F0F0"
+          RowHeight="25">
+
+            <!-- Вручную описываем нужные колонки -->
+            <DataGrid.Columns>
+                <!-- Какая-то ваша обычная колонка, например ID -->
+                <DataGridTextColumn Header="ID" Binding="{Binding Id}" />
+
+                <!-- Колонка для ДАТЫ -->
+                <!-- StringFormat={}{0:dd.MM.yyyy} выведет, например, 21.07.2026 -->
+                <DataGridTextColumn Header="Дата события" 
+                            Binding="{Binding EventTime, StringFormat=\{0:dd.MM.yyyy\}}" />
+
+                <!-- Колонка для ВРЕМЕНИ -->
+                <!-- Заглавные HH означают 24-часовой формат (00-23). Строчные hh дали бы 12-часовой. -->
+                <DataGridTextColumn Header="Время события" 
+                            Binding="{Binding EventTime, StringFormat=\{0:HH:mm:ss\}}" />
+                <DataGridTextColumn Header="Вх./выход" Binding="{Binding Direction}" Width="SizeToCells"/>
+                <DataGridTextColumn Header="Время " Binding="{Binding TemperatureTime}" Width="SizeToCells" />
+                <DataGridTextColumn Header="Температура" Binding="{Binding TemperatureTime}" Width="SizeToCells"/>
+                <DataGridTextColumn Header="Время алкотеста" Binding="{Binding TemperatureTime}" Width="SizeToCells"/>
+                <DataGridTextColumn Header="Промилле" Binding="{Binding TemperatureTime}" Width="SizeToCells"/>
+
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</Window>
