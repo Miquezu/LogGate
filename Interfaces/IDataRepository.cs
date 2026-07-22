@@ -1,10 +1,13 @@
-﻿using System;
+﻿using LogGate.Models;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace LogGate.Interfaces
 {
-    internal class IDataRepository
+    public interface IDataRepository
     {
+        void SaveItems(IEnumerable<DataItem> items);
+        List<DataItem> GetAllItems();
     }
 }

@@ -1,4 +1,5 @@
-﻿using LogGate.Interfaces;
+﻿using LogGate.DataAccess;
+using LogGate.Interfaces;
 using LogGate.Services;
 using LogGate.ViewModels;
 using System.Text;
@@ -27,9 +28,7 @@ namespace LogGate
             IFileParser fileParser = new CsvFileParser();
 
             // 2. Создаем ViewModel и передаем в нее готовый парсер
-            MainViewModel viewModel = new MainViewModel(fileParser);
-
-            DataContext = viewModel;
+            DataContext = new MainViewModel(new CsvFileParser(), new DataRepository());
         }
     }
 }

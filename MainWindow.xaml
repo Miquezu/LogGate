@@ -31,30 +31,24 @@
           ItemsSource="{Binding DataItems}" 
           AutoGenerateColumns="False" 
           IsReadOnly="True"
-          HeadersVisibility="Column"
+          HeadersVisibility="All"
           AlternatingRowBackground="#FFF0F0F0"
-          RowHeight="25">
+          RowHeight="33">
 
             <!-- Вручную описываем нужные колонки -->
             <DataGrid.Columns>
-                <!-- Какая-то ваша обычная колонка, например ID -->
-                <DataGridTextColumn Header="ID" Binding="{Binding Id}" />
-
-                <!-- Колонка для ДАТЫ -->
-                <!-- StringFormat={}{0:dd.MM.yyyy} выведет, например, 21.07.2026 -->
-                <DataGridTextColumn Header="Дата события" 
-                            Binding="{Binding EventTime, StringFormat=\{0:dd.MM.yyyy\}}" />
-
-                <!-- Колонка для ВРЕМЕНИ -->
-                <!-- Заглавные HH означают 24-часовой формат (00-23). Строчные hh дали бы 12-часовой. -->
-                <DataGridTextColumn Header="Время события" 
-                            Binding="{Binding EventTime, StringFormat=\{0:HH:mm:ss\}}" />
+                <DataGridTextColumn Header="Дата" Binding="{Binding EventTime, StringFormat=\{0:dd.MM.yy\}}" Width="SizeToCells"/>
+                <DataGridTextColumn Header="Время" Binding="{Binding EventTime, StringFormat=\{0:HH:mm:ss\}}" Width="SizeToCells"/>
                 <DataGridTextColumn Header="Вх./выход" Binding="{Binding Direction}" Width="SizeToCells"/>
-                <DataGridTextColumn Header="Время " Binding="{Binding TemperatureTime}" Width="SizeToCells" />
-                <DataGridTextColumn Header="Температура" Binding="{Binding TemperatureTime}" Width="SizeToCells"/>
-                <DataGridTextColumn Header="Время алкотеста" Binding="{Binding TemperatureTime}" Width="SizeToCells"/>
-                <DataGridTextColumn Header="Промилле" Binding="{Binding TemperatureTime}" Width="SizeToCells"/>
-
+                <DataGridTextColumn Header="Время 🌡️" Binding="{Binding TemperatureTime, StringFormat=\{0:dd.MM.yy HH:mm:ss\}}" Width="SizeToCells"/>
+                <DataGridTextColumn Header="🌡️ °C" Binding="{Binding Temperature}" Width="SizeToCells"/>
+                <DataGridTextColumn Header="Время алко." Binding="{Binding AlcotestTime, StringFormat=\{0:dd.MM.yy HH:mm:ss\}}" Width="SizeToCells"/>
+                <DataGridTextColumn Header="Результат алко." Binding="{Binding AlcotestResult}" Width="SizeToCells"/>
+                <DataGridTextColumn Header="ФИО" Binding="{Binding FullName}" Width="SizeToCells"/>
+                <DataGridTextColumn Header="Должность" Binding="{Binding Position}" Width="SizeToCells"/>
+                <DataGridTextColumn Header="Подразделение" Binding="{Binding Department}" Width="SizeToCells"/>
+                <DataGridTextColumn Header="Таб. №" Binding="{Binding EmployeeNumber}" Width="SizeToCells"/>
+                <DataGridTextColumn Header="Пропуск" Binding="{Binding PassNumber}" Width="SizeToCells"/>
             </DataGrid.Columns>
         </DataGrid>
     </Grid>
