@@ -1,12 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace LogGate.Models
+﻿namespace LogGate.Models
 {
     public class DataItem
     {
-        // 1. Системный ключ для базы данных SQLite (EF Core сам заполнит его)
         public int Id { get; set; }
 
         // 2. Данные напрямую из вашего файла
@@ -21,11 +16,11 @@ namespace LogGate.Models
         public DateTime? AlcotestTime { get; set; }  // Время алкотеста
         public double? AlcotestResult { get; set; }  // Результат,мг/л
 
-        public string? FullName { get; set; } = string.Empty;      // Ф.И.О. тестируемого
-        public string? Position { get; set; } = string.Empty;      // Должность
-        public string? Department { get; set; } = string.Empty;    // Подразделение
-        public string? EmployeeNumber { get; set; } = string.Empty;// Таб.№
-        public string? PassNumber { get; set; } = string.Empty;    // Пропуск
+        public string? FullName { get; set; }      // Ф.И.О. тестируемого
+        public string? Position { get; set; }     // Должность
+        public string? Department { get; set; }     // Подразделение
+        public string? EmployeeNumber { get; set; } // Таб.№
+        public string? PassNumber { get; set; }     // Пропуск
 
     }
 }

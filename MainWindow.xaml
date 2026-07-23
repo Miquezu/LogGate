@@ -1,54 +1,157 @@
-﻿<Window x:Class="LogGate.MainWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:LogGate"
-        Style="{StaticResource MaterialDesignWindow}"
-        mc:Ignorable="d"
-        Title="Учет времени — Сводка" Height="600" Width="1000"
-        WindowStartupLocation="CenterScreen"
-        Background="#F5F6F8">
+﻿<Window
+    x:Class="LogGate.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="clr-namespace:LogGate"
+    xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Title="Учет времени — Сводка"
+    Width="1000"
+    Height="600"
+    Background="#F5F6F8"
+    Style="{StaticResource MaterialDesignWindow}"
+    WindowStartupLocation="CenterScreen"
+    mc:Ignorable="d">
     <Grid Margin="10">
         <Grid.RowDefinitions>
-            <!-- Строка для кнопок -->
-            <RowDefinition Height="Auto"/>
-            <!-- Строка для таблицы (займет все оставшееся место) -->
-            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- Привязываем кнопку к сгенерированной команде LoadDataCommand -->
-        <Button Grid.Row="0" 
-            Content="Прочитать файл" 
-            Command="{Binding LoadDataCommand}" 
-            Width="150" 
-            HorizontalAlignment="Left" 
-            Padding="5" 
-            Margin="0,0,0,10"/>
+        <Border
+            Margin="0,0,0,10"
+            Padding="12,8"
+            materialDesign:ElevationAssist.Elevation="Dp2"
+            Background="{DynamicResource MaterialDesignPaper}"
+            CornerRadius="8">
 
-        <!-- Привязываем таблицу к нашей коллекции DataItems -->
-        <DataGrid Grid.Row="1" 
-          ItemsSource="{Binding DataItems}" 
-          AutoGenerateColumns="False" 
-          IsReadOnly="True"
-          HeadersVisibility="All"
-          AlternatingRowBackground="#FFF0F0F0"
-          RowHeight="33">
+            <WrapPanel VerticalAlignment="Center">
+                <Button
+                    Margin="0,0,15,0"
+                    Command="{Binding LoadDataCommand}"
+                    Style="{StaticResource MaterialDesignRaisedButton}"
+                    ToolTip="Загрузить лог-файл CSV"
+                    Height="50"
+                    >
+                    
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon
+                            Width="20"
+                            Height="20"
+                            Margin="0,0,8,0"
+                            VerticalAlignment="Center"
+                            Kind="FolderUpload" />
+                        <TextBlock VerticalAlignment="Center" Text="Загрузить CSV" />
+                    </StackPanel>
+                </Button>
+                <TextBox
+                    Height="50"
+                    Width="250"
+                    Margin="0,0,15,0"
+                    VerticalAlignment="Center"
+                    materialDesign:HintAssist.Hint="Поиск по ФИО, пропуску..."
+                    materialDesign:TextFieldAssist.HasClearButton="True"
+                    materialDesign:TextFieldAssist.LeadingIcon="Magnify"
+                    Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                    Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+                <!--  Фильтр по дате "С"  -->
+                <DatePicker
+                    Height="50"
+                    Width="140"
+                    Margin="0,0,10,0"
+                    VerticalAlignment="Center"
+                    materialDesign:HintAssist.Hint="С даты"
+                    SelectedDate="{Binding StartDate}"
+                    Style="{StaticResource MaterialDesignOutlinedDatePicker}" />
 
-            <!-- Вручную описываем нужные колонки -->
+                <!--  Фильтр по дате "По"  -->
+                <DatePicker
+                    Height="50"
+                    Width="140"
+                    Margin="0,0,15,0"
+                    VerticalAlignment="Center"
+                    materialDesign:HintAssist.Hint="По дату"
+                    SelectedDate="{Binding EndDate}"
+                    Style="{StaticResource MaterialDesignOutlinedDatePicker}" />
+
+                <!--  Кнопка сброса фильтров  -->
+                <Button
+                    Height="50"
+                    VerticalAlignment="Center"
+                    Command="{Binding ResetFiltersCommand}"
+                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                    ToolTip="Сбросить все фильтры">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon
+                            Width="20"
+                            Height="20"
+                            Margin="0,0,6,0"
+                            VerticalAlignment="Center"
+                            Kind="FilterRemove" />
+                        <TextBlock VerticalAlignment="Center" Text="Сброс" />
+                    </StackPanel>
+                </Button>
+            </WrapPanel>
+        </Border>
+        <DataGrid
+            Grid.Row="1"
+            AlternatingRowBackground="#FFF0F0F0"
+            AutoGenerateColumns="False"
+            HeadersVisibility="All"
+            IsReadOnly="True"
+            ItemsSource="{Binding DataItems}"
+            RowHeight="33">
+
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Дата" Binding="{Binding EventTime, StringFormat=\{0:dd.MM.yy\}}" Width="SizeToCells"/>
-                <DataGridTextColumn Header="Время" Binding="{Binding EventTime, StringFormat=\{0:HH:mm:ss\}}" Width="SizeToCells"/>
-                <DataGridTextColumn Header="Вх./выход" Binding="{Binding Direction}" Width="SizeToCells"/>
-                <DataGridTextColumn Header="Время 🌡️" Binding="{Binding TemperatureTime, StringFormat=\{0:dd.MM.yy HH:mm:ss\}}" Width="SizeToCells"/>
-                <DataGridTextColumn Header="🌡️ °C" Binding="{Binding Temperature}" Width="SizeToCells"/>
-                <DataGridTextColumn Header="Время алко." Binding="{Binding AlcotestTime, StringFormat=\{0:dd.MM.yy HH:mm:ss\}}" Width="SizeToCells"/>
-                <DataGridTextColumn Header="Результат алко." Binding="{Binding AlcotestResult}" Width="SizeToCells"/>
-                <DataGridTextColumn Header="ФИО" Binding="{Binding FullName}" Width="SizeToCells"/>
-                <DataGridTextColumn Header="Должность" Binding="{Binding Position}" Width="SizeToCells"/>
-                <DataGridTextColumn Header="Подразделение" Binding="{Binding Department}" Width="SizeToCells"/>
-                <DataGridTextColumn Header="Таб. №" Binding="{Binding EmployeeNumber}" Width="SizeToCells"/>
-                <DataGridTextColumn Header="Пропуск" Binding="{Binding PassNumber}" Width="SizeToCells"/>
+                <DataGridTextColumn
+                    Width="SizeToCells"
+                    Binding="{Binding EventTime, StringFormat=\{0:dd.MM.yy\}}"
+                    Header="Дата" />
+                <DataGridTextColumn
+                    Width="SizeToCells"
+                    Binding="{Binding EventTime, StringFormat=\{0:HH:mm:ss\}}"
+                    Header="Время" />
+                <DataGridTextColumn
+                    Width="SizeToCells"
+                    Binding="{Binding Direction}"
+                    Header="Вх./выход" />
+                <DataGridTextColumn
+                    Width="SizeToCells"
+                    Binding="{Binding TemperatureTime, StringFormat=\{0:dd.MM.yy HH:mm:ss\}}"
+                    Header="Время 🌡️" />
+                <DataGridTextColumn
+                    Width="SizeToCells"
+                    Binding="{Binding Temperature}"
+                    Header="🌡️ °C" />
+                <DataGridTextColumn
+                    Width="SizeToCells"
+                    Binding="{Binding AlcotestTime, StringFormat=\{0:dd.MM.yy HH:mm:ss\}}"
+                    Header="Время алко." />
+                <DataGridTextColumn
+                    Width="SizeToCells"
+                    Binding="{Binding AlcotestResult}"
+                    Header="Результат алко." />
+                <DataGridTextColumn
+                    Width="SizeToCells"
+                    Binding="{Binding FullName}"
+                    Header="ФИО" />
+                <DataGridTextColumn
+                    Width="200"
+                    Binding="{Binding Position}"
+                    Header="Должность" />
+                <DataGridTextColumn
+                    Width="150"
+                    Binding="{Binding Department}"
+                    Header="Подразделение" />
+                <DataGridTextColumn
+                    Width="SizeToCells"
+                    Binding="{Binding EmployeeNumber}"
+                    Header="Таб. №" />
+                <DataGridTextColumn
+                    Width="SizeToCells"
+                    Binding="{Binding PassNumber}"
+                    Header="Пропуск" />
             </DataGrid.Columns>
         </DataGrid>
     </Grid>

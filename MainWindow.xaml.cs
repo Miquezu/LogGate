@@ -28,7 +28,7 @@ namespace LogGate
             IFileParser fileParser = new CsvFileParser();
 
             // 2. Создаем ViewModel и передаем в нее готовый парсер
-            DataContext = new MainViewModel(new CsvFileParser(), new DataRepository());
+            DataContext = new MainViewModel(new CsvFileParser(), new DataRepository(), new OpenDialog());
         }
     }
 }

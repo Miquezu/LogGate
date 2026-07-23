@@ -2,11 +2,8 @@
 using CsvHelper.Configuration;
 using LogGate.Interfaces;
 using LogGate.Models;
-using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Text;
 
 namespace LogGate.Services
 {
@@ -24,10 +21,7 @@ namespace LogGate.Services
             
             using var reader = new StreamReader(filePath);
             using var csv = new CsvReader(reader, config);
-            // 3. Подключаем вашу карту колонок с правильным маппингом
             csv.Context.RegisterClassMap<DataItemMap>();
-
-            // 4. Запускаем чтение и превращаем результат в список объектов DataItem
             var records = csv.GetRecords<DataItem>().ToList();
 
             return records;

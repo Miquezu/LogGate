@@ -1,34 +1,38 @@
 ﻿using LogGate.Interfaces;
 using LogGate.Models;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace LogGate.DataAccess
 {
-    internal class DataRepository: IDataRepository
+    internal class DataRepository : IDataRepository
     {
-        // Метод для сохранения списка данных в базу
-        public void SaveItems(IEnumerable<DataItem> items)
+        public int SaveItems(IEnumerable<DataItem> items)
         {
-            using (var context = new AppDBContext())
-            {
-                // Добавляем все элементы разом
-                context.DataItems.AddRange(items);
+            using var context = new AppDBContext();
 
-                // Сохраняем изменения в файл базы данных
+            // 1. Формируем составной ключ из сущностей в БД: RecordNumber + EventTime
+            var existingKeys = context.DataItems
+                .Select(x => x.RecordNumber + "_" + x.EventTime.ToString())
+                .ToHashSet();
+
+            // 2. Фильтруем новые элементы по такому же составному ключу
+            var filteredItems = items
+                .Where(item => !existingKeys.Contains($"{item.RecordNumber}_{item.EventTime}"))
+                .ToList();
+
+            if (filteredItems.Count != 0)
+            {
+                context.DataItems.AddRange(filteredItems);
                 context.SaveChanges();
+                return filteredItems.Count;
             }
+
+            return 0;
         }
 
-        // Метод для выгрузки данных из базы (чтобы потом показать в таблице)
         public List<DataItem> GetAllItems()
         {
-            using (var context = new AppDBContext())
-            {
-                // Возвращаем все записи как список
-                return context.DataItems.ToList();
-            }
+            using var context = new AppDBContext();
+            return context.DataItems.ToList();
         }
     }
 }
