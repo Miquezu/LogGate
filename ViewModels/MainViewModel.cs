@@ -6,14 +6,51 @@ using System.Collections.ObjectModel;
 
 namespace LogGate.ViewModels
 {
-    public partial class MainViewModel: ObservableObject
+    public partial class MainViewModel : ObservableObject
     {
-        private readonly IFileParser _fileParser;
         private readonly IDataRepository _dataRepository;
         private readonly IDialogService _dialogService;
+        private readonly IFileParser _fileParser;
 
         [ObservableProperty]
         private ObservableCollection<DataItem> _dataItems = new();
+
+        [ObservableProperty]
+        private DateTime? _endDate;
+
+        [ObservableProperty]
+        private int _filteredCount;
+
+        [ObservableProperty]
+        private string _searchText = string.Empty;
+
+        [ObservableProperty]
+        private DateTime? _startDate;
+
+        [ObservableProperty]
+        private string _statusMessage = "Готово";
+
+        [ObservableProperty]
+        private int _totalCount;
+
+        // Настройки графика смены (по умолчанию с 08:00 до 17:00)
+        [ObservableProperty]
+        private TimeSpan _shiftStartTime = new TimeSpan(8, 0, 0);
+
+        [ObservableProperty]
+        private TimeSpan _shiftEndTime = new TimeSpan(17, 0, 0);
+
+        // Галочка "Опоздавшие"
+        [ObservableProperty]
+        private bool _showLateArrivals;
+
+        partial void OnShowLateArrivalsChanged(bool value) => ApplyFilters();
+
+        // Галочка "Ушли раньше"
+        [ObservableProperty]
+        private bool _showEarlyDepartures;
+
+        partial void OnShowEarlyDeparturesChanged(bool value) => ApplyFilters();
 
         public MainViewModel(IFileParser fileParser, IDataRepository dataRepository, IDialogService dialogService)
         {
@@ -24,16 +61,29 @@ namespace LogGate.ViewModels
             LoadDataFromDatabase();
         }
 
-        private void LoadDataFromDatabase()
+        private void ApplyFilters()
         {
-            var dbData = _dataRepository.GetAllItems();
+            var query = _dataRepository.GetAllItems().AsEnumerable();
 
-            DataItems.Clear();
-            foreach (var item in dbData)
+            if (!string.IsNullOrWhiteSpace(SearchText))
             {
-                DataItems.Add(item);
+                query = query.Where(x =>
+                    (x.FullName != null && x.FullName.Contains(SearchText, StringComparison.OrdinalIgnoreCase)) ||
+                    (x.PassNumber != null && x.PassNumber.Contains(SearchText, StringComparison.OrdinalIgnoreCase)) ||
+                    (x.Department != null && x.Department.Contains(SearchText, StringComparison.OrdinalIgnoreCase))
+                );
             }
+
+            if (StartDate.HasValue)
+                query = query.Where(x => x.EventTime >= StartDate.Value);
+
+            if (EndDate.HasValue)
+                query = query.Where(x => x.EventTime <= EndDate.Value.AddDays(1).AddTicks(-1));
+
+            DataItems = new ObservableCollection<DataItem>(query);
+            FilteredCount = DataItems.Count;
         }
+
         // RelayCommand превратит этот метод в команду LoadDataCommand
         [RelayCommand]
         private void LoadData()
@@ -52,48 +102,25 @@ namespace LogGate.ViewModels
             else
                 _dialogService.ShowMessage("Все записи из этого файла уже есть в базе данных.");
         }
-        // Поисковая строка
-        [ObservableProperty]
-        private string _searchText = string.Empty;
 
-        // Фильтр по датам
-        [ObservableProperty]
-        private DateTime? _startDate;
-
-        [ObservableProperty]
-        private DateTime? _endDate;
-
-        // Метод для фильтрации (вызывается при изменении текста поиска или дат)
-        partial void OnSearchTextChanged(string value) => ApplyFilters();
-        partial void OnStartDateChanged(DateTime? value) => ApplyFilters();
-        partial void OnEndDateChanged(DateTime? value) => ApplyFilters();
-
-        private void ApplyFilters()
+        private void LoadDataFromDatabase()
         {
-            var query = _dataRepository.GetAllItems().AsEnumerable();
+            var dbData = _dataRepository.GetAllItems();
 
-            // 1. Поиск по тексту (ФИО, номер пропуска и т.д.)
-            if (!string.IsNullOrWhiteSpace(SearchText))
+            DataItems.Clear();
+            foreach (var item in dbData)
             {
-                query = query.Where(x =>
-                    (x.FullName != null && x.FullName.Contains(SearchText, StringComparison.OrdinalIgnoreCase)) ||
-                    (x.PassNumber != null && x.PassNumber.Contains(SearchText, StringComparison.OrdinalIgnoreCase)) ||
-                    (x.Department != null && x.Department.Contains(SearchText, StringComparison.OrdinalIgnoreCase))
-                );
+                DataItems.Add(item);
             }
-
-            // 2. Фильтр по диапазону дат
-            if (StartDate.HasValue)
-                query = query.Where(x => x.EventTime >= StartDate.Value);
-
-            if (EndDate.HasValue)
-                query = query.Where(x => x.EventTime <= EndDate.Value.AddDays(1).AddTicks(-1)); // Включая весь выбранный день
-
-            // Обновляем коллекцию на UI
-            DataItems = new ObservableCollection<DataItem>(query);
+            TotalCount = dbData.Count;
         }
 
-        // Команда сброса фильтров
+        partial void OnEndDateChanged(DateTime? value) => ApplyFilters();
+
+        partial void OnSearchTextChanged(string value) => ApplyFilters();
+
+        partial void OnStartDateChanged(DateTime? value) => ApplyFilters();
+
         [RelayCommand]
         private void ResetFilters()
         {

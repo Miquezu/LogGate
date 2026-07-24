@@ -9,14 +9,14 @@ namespace LogGate.DataAccess
         {
             using var context = new AppDBContext();
 
-            // 1. Формируем составной ключ из сущностей в БД: RecordNumber + EventTime
             var existingKeys = context.DataItems
-                .Select(x => x.RecordNumber + "_" + x.EventTime.ToString())
+                .Select(x => new { x.RecordNumber, x.EventTime })
+                .AsEnumerable()
+                .Select(x => (x.RecordNumber, x.EventTime))
                 .ToHashSet();
 
-            // 2. Фильтруем новые элементы по такому же составному ключу
             var filteredItems = items
-                .Where(item => !existingKeys.Contains($"{item.RecordNumber}_{item.EventTime}"))
+                .Where(item => !existingKeys.Contains((item.RecordNumber, item.EventTime)))
                 .ToList();
 
             if (filteredItems.Count != 0)
@@ -25,7 +25,6 @@ namespace LogGate.DataAccess
                 context.SaveChanges();
                 return filteredItems.Count;
             }
-
             return 0;
         }
 
