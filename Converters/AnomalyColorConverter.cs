@@ -12,12 +12,12 @@ namespace LogGate.Converters
         {
             if (value is DataItem item && parameter != null)
             {
-                string param = parameter.ToString();
+                string? param = parameter.ToString();
 
                 // 1. Температура
                 if (param == "Temp" && item.Temperature != null)
                 {
-                    string tempStr = item.Temperature.ToString().Replace(',', '.');
+                    string? tempStr = item.Temperature?.ToString()?.Replace(',', '.');
                     if (double.TryParse(tempStr, NumberStyles.Any, CultureInfo.InvariantCulture, out double temp))
                         if (temp > 37.0) return new SolidColorBrush(Color.FromRgb(255, 236, 179));
                 }
@@ -26,18 +26,19 @@ namespace LogGate.Converters
                 if (param == "Alco" && item.AlcotestResult > 0)
                     return new SolidColorBrush(Color.FromRgb(255, 205, 210));
 
-                // 3. Опоздания (Вход после 08:00)
-                if (param == "Late" && item.EventTime.HasValue && !string.IsNullOrEmpty(item.Direction))
+                if (param == "Time" && item.EventTime.HasValue && !string.IsNullOrEmpty(item.Direction))
                 {
-                    if (item.Direction.StartsWith("Вх", StringComparison.OrdinalIgnoreCase) && item.EventTime.Value.TimeOfDay > new TimeSpan(8, 0, 0))
+                    // Опоздание: Вход после 08:01:00
+                    if (item.Direction.StartsWith("Вх", StringComparison.OrdinalIgnoreCase) && item.EventTime.Value.TimeOfDay > new TimeSpan(8, 1, 0))
+                    {
                         return new SolidColorBrush(Color.FromRgb(255, 205, 210)); // Красный
-                }
+                    }
 
-                // 4. Ушли рано (Выход до 17:00)
-                if (param == "Early" && item.EventTime.HasValue && !string.IsNullOrEmpty(item.Direction))
-                {
-                    if (item.Direction.StartsWith("Вых", StringComparison.OrdinalIgnoreCase) && item.EventTime.Value.TimeOfDay < new TimeSpan(17, 0, 0))
+                    // Ушли рано: Выход до 16:30:00
+                    if (item.Direction.StartsWith("Вых", StringComparison.OrdinalIgnoreCase) && item.EventTime.Value.TimeOfDay < new TimeSpan(16, 30, 0))
+                    {
                         return new SolidColorBrush(Color.FromRgb(255, 236, 179)); // Желтый
+                    }
                 }
             }
 

@@ -13,7 +13,7 @@
     Background="#F5F6F8"
     Style="{StaticResource MaterialDesignWindow}"
     WindowStartupLocation="CenterScreen"
-    mc:Ignorable="d">
+    mc:Ignorable="d" Closed="Window_Closed">
     <Window.Resources>
         <converters:AnomalyColorConverter x:Key="AnomalyColorConverter" />
     </Window.Resources>
@@ -33,20 +33,19 @@
 
             <WrapPanel VerticalAlignment="Center">
                 <Button
+                    Width="50"
                     Height="50"
-                    Margin="0,0,15,0"
+                    Margin="0,0,10,0"
                     Command="{Binding LoadDataCommand}"
-                    Style="{StaticResource MaterialDesignRaisedButton}"
+                    Style="{StaticResource MaterialDesignFloatingActionMiniButton}"
                     ToolTip="Загрузить лог-файл CSV">
 
                     <StackPanel Orientation="Horizontal">
                         <materialDesign:PackIcon
-                            Width="20"
-                            Height="20"
-                            Margin="0,0,8,0"
+                            Width="24"
+                            Height="24"
                             VerticalAlignment="Center"
                             Kind="FolderUpload" />
-                        <TextBlock VerticalAlignment="Center" Text="Загрузить CSV" />
                     </StackPanel>
                 </Button>
                 <TextBox
@@ -59,7 +58,14 @@
                     materialDesign:TextFieldAssist.LeadingIcon="Magnify"
                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
-                <!--  Фильтр по дате "С"  -->
+                <ComboBox
+                    Width="150"
+                    Height="50"
+                    Margin="0,0,10,0"
+                    materialDesign:HintAssist.Hint="Выбор периода"
+                    ItemsSource="{Binding DatePresets}"
+                    SelectedItem="{Binding SelectedDatePreset}"
+                    Style="{StaticResource MaterialDesignOutlinedComboBox}" />
                 <DatePicker
                     Width="140"
                     Height="50"
@@ -108,6 +114,8 @@
                     Content="Ушли рано"
                     Cursor="Hand"
                     IsChecked="{Binding ShowEarlyDepartures}" />
+
+                <!--  По желанию можно настроить внешний вид элементов (ItemTemplate)  -->
             </WrapPanel>
         </Border>
         <DataGrid
@@ -131,21 +139,20 @@
                     Binding="{Binding EventTime, StringFormat=\{0:dd.MM.yy\}}"
                     Header="Дата" />
                 <DataGridTextColumn
-                    Width="SizeToCells"
-                    Binding="{Binding EventTime, StringFormat=\{0:HH:mm:ss\}}"
-                    Header="Время">
+    Width="SizeToCells"
+    Binding="{Binding EventTime, StringFormat=\{0:HH:mm:ss\}}"
+    Header="Время">
+                    <DataGridTextColumn.CellStyle>
+                        <Style BasedOn="{StaticResource MaterialDesignDataGridCell}" TargetType="DataGridCell">
+                            <!-- Теперь красим всю ячейку целиком -->
+                            <Setter Property="Background" Value="{Binding Converter={StaticResource AnomalyColorConverter}, ConverterParameter=Time}" />
+                        </Style>
+                    </DataGridTextColumn.CellStyle>
                     <DataGridTextColumn.ElementStyle>
+                        <!-- Оставляем выравнивание текста по центру -->
                         <Style TargetType="TextBlock">
                             <Setter Property="Padding" Value="5,2" />
                             <Setter Property="VerticalAlignment" Value="Center" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding DataContext.ShowLateArrivals, RelativeSource={RelativeSource AncestorType=DataGrid}}" Value="True">
-                                    <Setter Property="Background" Value="{Binding Converter={StaticResource AnomalyColorConverter}, ConverterParameter=Late}" />
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding DataContext.ShowEarlyDepartures, RelativeSource={RelativeSource AncestorType=DataGrid}}" Value="True">
-                                    <Setter Property="Background" Value="{Binding Converter={StaticResource AnomalyColorConverter}, ConverterParameter=Early}" />
-                                </DataTrigger>
-                            </Style.Triggers>
                         </Style>
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
@@ -239,8 +246,33 @@
                 </StackPanel>
             </StatusBarItem>
 
-            <!--  Разделитель  -->
-            <Separator Grid.Column="1" Margin="10,2" />
+            <StatusBarItem Grid.Column="1" HorizontalAlignment="Center">
+                <StackPanel Orientation="Horizontal">
+                    <!-- Кнопка Назад -->
+                    <Button
+            Command="{Binding PreviousPageCommand}"
+            Style="{StaticResource MaterialDesignToolButton}"
+            Width="30" Height="30" Padding="0">
+                        <materialDesign:PackIcon Kind="ChevronLeft" />
+                    </Button>
+
+                    <!-- Индикатор страниц -->
+                    <TextBlock VerticalAlignment="Center" Margin="15,0">
+            <Run Text="Стр. " />
+            <Run Text="{Binding CurrentPage}" FontWeight="SemiBold" />
+            <Run Text=" из " />
+            <Run Text="{Binding TotalPages}" />
+                    </TextBlock>
+
+                    <!-- Кнопка Вперед -->
+                    <Button
+            Command="{Binding NextPageCommand}"
+            Style="{StaticResource MaterialDesignToolButton}"
+            Width="30" Height="30" Padding="0">
+                        <materialDesign:PackIcon Kind="ChevronRight" />
+                    </Button>
+                </StackPanel>
+            </StatusBarItem>
 
             <!--  2. Информация о количестве записей  -->
             <StatusBarItem Grid.Column="2">

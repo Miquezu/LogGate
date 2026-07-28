@@ -1,15 +1,21 @@
 ﻿using LogGate.Interfaces;
 using LogGate.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace LogGate.DataAccess
 {
-    internal class DataRepository : IDataRepository
+    internal class DataRepository : IDataRepository, IDisposable
     {
+        private readonly AppDBContext _context;
+
+        public DataRepository()
+        {
+            _context = new AppDBContext();
+        }
+
         public int SaveItems(IEnumerable<DataItem> items)
         {
-            using var context = new AppDBContext();
-
-            var existingKeys = context.DataItems
+            var existingKeys = _context.DataItems
                 .Select(x => new { x.RecordNumber, x.EventTime })
                 .AsEnumerable()
                 .Select(x => (x.RecordNumber, x.EventTime))
@@ -21,17 +27,19 @@ namespace LogGate.DataAccess
 
             if (filteredItems.Count != 0)
             {
-                context.DataItems.AddRange(filteredItems);
-                context.SaveChanges();
+                _context.DataItems.AddRange(filteredItems);
+                _context.SaveChanges();
                 return filteredItems.Count;
             }
             return 0;
         }
 
-        public List<DataItem> GetAllItems()
+        public IQueryable<DataItem> GetAllItems()
         {
-            using var context = new AppDBContext();
-            return context.DataItems.ToList();
+            return _context.DataItems.AsNoTracking();
         }
+
+        public void Dispose() =>
+            _context?.Dispose();
     }
 }

@@ -5,6 +5,7 @@ namespace LogGate.Interfaces
     public interface IDataRepository
     {
         int SaveItems(IEnumerable<DataItem> items);
-        List<DataItem> GetAllItems();
+
+        IQueryable<DataItem> GetAllItems();
     }
 }

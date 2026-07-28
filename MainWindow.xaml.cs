@@ -17,5 +17,11 @@ namespace LogGate
 
             DataContext = new MainViewModel(new CsvFileParser(), new DataRepository(), new OpenDialog());
         }
+
+        private void Window_Closed(object sender, EventArgs e)
+        {
+            if (DataContext is MainViewModel viewModel)
+                viewModel.Cleanup();
+        }
     }
 }
