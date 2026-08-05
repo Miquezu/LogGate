@@ -119,6 +119,7 @@
             </WrapPanel>
         </Border>
         <DataGrid
+            x:Name="LogsDataGrid"
             Grid.Row="1"
             AlternatingRowBackground="#FFF0F0F0"
             AutoGenerateColumns="False"

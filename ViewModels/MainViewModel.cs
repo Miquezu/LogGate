@@ -57,7 +57,7 @@ namespace LogGate.ViewModels
         private int _totalPages = 1;
 
         [ObservableProperty]
-        private int _pageSize = 50;
+        private int _pageSize = 100;
 
         public MainViewModel(IFileParser fileParser, IDataRepository dataRepository, IDialogService dialogService)
         {
@@ -82,10 +82,11 @@ namespace LogGate.ViewModels
 
             if (!string.IsNullOrWhiteSpace(SearchText))
             {
+                var lowerText = SearchText.ToLower();
                 query = query.Where(x =>
-                    (x.FullName != null && x.FullName.Contains(SearchText)) ||
-                    (x.PassNumber != null && x.PassNumber.Contains(SearchText)) ||
-                    (x.Department != null && x.Department.Contains(SearchText))
+                    (x.FullName != null && x.FullName.ToLower().Contains(lowerText)) ||
+                    (x.PassNumber != null && x.PassNumber.ToLower().Contains(lowerText)) ||
+                    (x.Department != null && x.Department.ToLower().Contains(lowerText))
                 );
             }
 
@@ -96,16 +97,14 @@ namespace LogGate.ViewModels
                 query = query.Where(x => x.EventTime <= EndDate.Value.AddDays(1).AddTicks(-1));
 
             if (ShowLateArrivals)
-            {
-                var lateTime = new TimeSpan(8, 1, 0);
-                query = query.Where(x => x.EventTime.HasValue && x.EventTime.Value.TimeOfDay > lateTime && x.Direction == "Вход");
-            }
+                query = query.Where(x => x.EventTime.HasValue &&
+                (x.EventTime.Value.Hour > 8 || (x.EventTime.Value.Hour == 8 && x.EventTime.Value.Minute >= 1)) &&
+                 x.Direction == "Вход");
 
             if (ShowEarlyDepartures)
-            {
-                var earlyTime = new TimeSpan(16, 30, 0);
-                query = query.Where(x => x.EventTime.HasValue && x.EventTime.Value.TimeOfDay < earlyTime && x.Direction == "Выход");
-            }
+                query = query.Where(x => x.EventTime.HasValue &&
+                (x.EventTime.Value.Hour < 16 || (x.EventTime.Value.Hour == 16 && x.EventTime.Value.Minute < 30)) &&
+                 x.Direction == "Выход");
 
             FilteredCount = query.Count();
             TotalPages = (int)Math.Ceiling((double)FilteredCount / PageSize);
@@ -157,7 +156,7 @@ namespace LogGate.ViewModels
 
             try
             {
-                await Task.Delay(500, token);
+                await Task.Delay(400, token);
                 ApplyFilters();
             }
             catch (TaskCanceledException)
