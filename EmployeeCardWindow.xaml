@@ -1,0 +1,33 @@
+﻿<Window x:Class="LogGate.EmployeeCardWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:LogGate"
+        mc:Ignorable="d"
+        Title="{Binding WindowTitle}"
+        Height="450" Width="800">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Шапка со статистикой -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+            <TextBlock Text="Всего записей в базе: " FontWeight="Bold" />
+            <TextBlock Text="{Binding TotalRecords}" />
+        </StackPanel>
+
+        <!-- Таблица проходов конкретного сотрудника -->
+        <DataGrid Grid.Row="1" ItemsSource="{Binding EmployeeHistory}"
+                  AutoGenerateColumns="False" IsReadOnly="True">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Дата и Время" Binding="{Binding EventTime, StringFormat=\{0:dd.MM.yyyy HH:mm:ss\}}" />
+                <DataGridTextColumn Header="Направление" Binding="{Binding Direction}" />
+                <DataGridTextColumn Header="Температура" Binding="{Binding Temperature}" />
+                <DataGridTextColumn Header="Алкотестер" Binding="{Binding AlcotestResult}" />
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</Window>

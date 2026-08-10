@@ -11,9 +11,10 @@
     Width="1200"
     Height="600"
     Background="#F5F6F8"
+    Closed="Window_Closed"
     Style="{StaticResource MaterialDesignWindow}"
     WindowStartupLocation="CenterScreen"
-    mc:Ignorable="d" Closed="Window_Closed">
+    mc:Ignorable="d">
     <Window.Resources>
         <converters:AnomalyColorConverter x:Key="AnomalyColorConverter" />
     </Window.Resources>
@@ -126,7 +127,8 @@
             HeadersVisibility="All"
             IsReadOnly="True"
             ItemsSource="{Binding DataItems}"
-            RowHeight="33">
+            RowHeight="33"
+            Sorting="LogsDataGrid_Sorting">
 
             <DataGrid.RowStyle>
                 <Style BasedOn="{StaticResource MaterialDesignDataGridRow}" TargetType="DataGridRow">
@@ -138,19 +140,20 @@
                 <DataGridTextColumn
                     Width="SizeToCells"
                     Binding="{Binding EventTime, StringFormat=\{0:dd.MM.yy\}}"
-                    Header="Дата" />
+                    Header="Дата"
+                    SortMemberPath="EventTime" />
                 <DataGridTextColumn
-    Width="SizeToCells"
-    Binding="{Binding EventTime, StringFormat=\{0:HH:mm:ss\}}"
-    Header="Время">
+                    Width="SizeToCells"
+                    Binding="{Binding EventTime, StringFormat=\{0:HH:mm:ss\}}"
+                    Header="Время"
+                    SortMemberPath="EventTime">
                     <DataGridTextColumn.CellStyle>
                         <Style BasedOn="{StaticResource MaterialDesignDataGridCell}" TargetType="DataGridCell">
-                            <!-- Теперь красим всю ячейку целиком -->
                             <Setter Property="Background" Value="{Binding Converter={StaticResource AnomalyColorConverter}, ConverterParameter=Time}" />
                         </Style>
                     </DataGridTextColumn.CellStyle>
                     <DataGridTextColumn.ElementStyle>
-                        <!-- Оставляем выравнивание текста по центру -->
+                        <!--  Оставляем выравнивание текста по центру  -->
                         <Style TargetType="TextBlock">
                             <Setter Property="Padding" Value="5,2" />
                             <Setter Property="VerticalAlignment" Value="Center" />
@@ -160,15 +163,18 @@
                 <DataGridTextColumn
                     Width="SizeToCells"
                     Binding="{Binding Direction}"
-                    Header="Вх./выход" />
+                    Header="Вх./выход"
+                    SortMemberPath="Direcrion" />
                 <DataGridTextColumn
                     Width="SizeToCells"
                     Binding="{Binding TemperatureTime, StringFormat=\{0:HH:mm:ss\}}"
-                    Header="Время 🌡️" />
+                    Header="Время 🌡️"
+                    SortMemberPath="TemperatureTime" />
                 <DataGridTextColumn
                     Width="SizeToCells"
                     Binding="{Binding Temperature}"
-                    Header="🌡️ °C">
+                    Header="🌡️ °C"
+                    SortMemberPath="Temperature">
                     <DataGridTextColumn.CellStyle>
                         <Style BasedOn="{StaticResource MaterialDesignDataGridCell}" TargetType="DataGridCell">
                             <Setter Property="Background" Value="{Binding Converter={StaticResource AnomalyColorConverter}, ConverterParameter=Temp}" />
@@ -178,11 +184,13 @@
                 <DataGridTextColumn
                     Width="SizeToCells"
                     Binding="{Binding AlcotestTime, StringFormat=\{0:dd.MM.yy HH:mm:ss\}}"
-                    Header="Время алко." />
+                    Header="Время алко."
+                    SortMemberPath="AlcotestTime" />
                 <DataGridTextColumn
                     Width="SizeToCells"
                     Binding="{Binding AlcotestResult}"
-                    Header="Результат алко.">
+                    Header="Результат алко."
+                    SortMemberPath="AlcotestResult">
                     <DataGridTextColumn.CellStyle>
                         <Style BasedOn="{StaticResource MaterialDesignDataGridCell}" TargetType="DataGridCell">
                             <Setter Property="Background" Value="{Binding Converter={StaticResource AnomalyColorConverter}, ConverterParameter=Alco}" />
@@ -192,23 +200,28 @@
                 <DataGridTextColumn
                     Width="SizeToCells"
                     Binding="{Binding FullName}"
-                    Header="ФИО" />
+                    Header="ФИО"
+                    SortMemberPath="FullName" />
                 <DataGridTextColumn
                     Width="200"
                     Binding="{Binding Position}"
-                    Header="Должность" />
+                    Header="Должность"
+                    SortMemberPath="Position" />
                 <DataGridTextColumn
                     Width="150"
                     Binding="{Binding Department}"
-                    Header="Подразделение" />
+                    Header="Подразделение"
+                    SortMemberPath="Departament" />
                 <DataGridTextColumn
                     Width="SizeToCells"
                     Binding="{Binding EmployeeNumber}"
-                    Header="Таб. №" />
+                    Header="Таб. №"
+                    SortMemberPath="EmployeeNumber" />
                 <DataGridTextColumn
                     Width="SizeToCells"
                     Binding="{Binding PassNumber}"
-                    Header="Пропуск" />
+                    Header="Пропуск"
+                    SortMemberPath="PassNumber" />
             </DataGrid.Columns>
         </DataGrid>
         <StatusBar
@@ -249,27 +262,31 @@
 
             <StatusBarItem Grid.Column="1" HorizontalAlignment="Center">
                 <StackPanel Orientation="Horizontal">
-                    <!-- Кнопка Назад -->
+                    <!--  Кнопка Назад  -->
                     <Button
-            Command="{Binding PreviousPageCommand}"
-            Style="{StaticResource MaterialDesignToolButton}"
-            Width="30" Height="30" Padding="0">
+                        Width="30"
+                        Height="30"
+                        Padding="0"
+                        Command="{Binding PreviousPageCommand}"
+                        Style="{StaticResource MaterialDesignToolButton}">
                         <materialDesign:PackIcon Kind="ChevronLeft" />
                     </Button>
 
-                    <!-- Индикатор страниц -->
-                    <TextBlock VerticalAlignment="Center" Margin="15,0">
-            <Run Text="Стр. " />
-            <Run Text="{Binding CurrentPage}" FontWeight="SemiBold" />
-            <Run Text=" из " />
-            <Run Text="{Binding TotalPages}" />
+                    <!--  Индикатор страниц  -->
+                    <TextBlock Margin="15,0" VerticalAlignment="Center">
+                        <Run Text="Стр. " />
+                        <Run FontWeight="SemiBold" Text="{Binding CurrentPage}" />
+                        <Run Text=" из " />
+                        <Run Text="{Binding TotalPages}" />
                     </TextBlock>
 
-                    <!-- Кнопка Вперед -->
+                    <!--  Кнопка Вперед  -->
                     <Button
-            Command="{Binding NextPageCommand}"
-            Style="{StaticResource MaterialDesignToolButton}"
-            Width="30" Height="30" Padding="0">
+                        Width="30"
+                        Height="30"
+                        Padding="0"
+                        Command="{Binding NextPageCommand}"
+                        Style="{StaticResource MaterialDesignToolButton}">
                         <materialDesign:PackIcon Kind="ChevronRight" />
                     </Button>
                 </StackPanel>

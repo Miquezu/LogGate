@@ -2,6 +2,7 @@
 using CommunityToolkit.Mvvm.Input;
 using LogGate.Interfaces;
 using LogGate.Models;
+using LogGate.Services;
 using System.Collections.ObjectModel;
 
 namespace LogGate.ViewModels
@@ -16,7 +17,10 @@ namespace LogGate.ViewModels
         private ObservableCollection<DataItem> _dataItems = [];
 
         [ObservableProperty]
-        private DateTime? _endDate;
+        private DateTime? _endDate = DateTime.Today;
+
+        [ObservableProperty]
+        private DateTime? _startDate = DateTime.Today;
 
         [ObservableProperty]
         private int _filteredCount;
@@ -27,7 +31,7 @@ namespace LogGate.ViewModels
         private string _searchText = string.Empty;
 
         [ObservableProperty]
-        private string? _selectedDatePreset;
+        private string? _selectedDatePreset = "Сегодня";
 
         [ObservableProperty]
         private TimeSpan _shiftEndTime = new(16, 30, 0);
@@ -42,9 +46,6 @@ namespace LogGate.ViewModels
         private bool _showLateArrivals;
 
         [ObservableProperty]
-        private DateTime? _startDate;
-
-        [ObservableProperty]
         private string _statusMessage = "Готово";
 
         [ObservableProperty]
@@ -57,7 +58,13 @@ namespace LogGate.ViewModels
         private int _totalPages = 1;
 
         [ObservableProperty]
-        private int _pageSize = 100;
+        private int _pageSize = 200;
+
+        [ObservableProperty]
+        private string _sortColumn = "EventTime";
+
+        [ObservableProperty]
+        private bool _sortDescending = true;
 
         public MainViewModel(IFileParser fileParser, IDataRepository dataRepository, IDialogService dialogService)
         {
@@ -73,7 +80,8 @@ namespace LogGate.ViewModels
             "Сегодня",
             "Вчера",
             "За 7 дней",
-            "Этот месяц"
+            "Этот месяц",
+            "Прошлый месяц"
         ];
 
         private void ApplyFilters(bool resetPage = true)
@@ -97,14 +105,10 @@ namespace LogGate.ViewModels
                 query = query.Where(x => x.EventTime <= EndDate.Value.AddDays(1).AddTicks(-1));
 
             if (ShowLateArrivals)
-                query = query.Where(x => x.EventTime.HasValue &&
-                (x.EventTime.Value.Hour > 8 || (x.EventTime.Value.Hour == 8 && x.EventTime.Value.Minute >= 1)) &&
-                 x.Direction == "Вход");
+                query = query.Where(ScheduleRules.IsLateExpression());
 
             if (ShowEarlyDepartures)
-                query = query.Where(x => x.EventTime.HasValue &&
-                (x.EventTime.Value.Hour < 16 || (x.EventTime.Value.Hour == 16 && x.EventTime.Value.Minute < 30)) &&
-                 x.Direction == "Выход");
+                query = query.Where(ScheduleRules.IsEarlyDepartureExpression());
 
             FilteredCount = query.Count();
             TotalPages = (int)Math.Ceiling((double)FilteredCount / PageSize);
@@ -114,11 +118,45 @@ namespace LogGate.ViewModels
             if (resetPage)
                 CurrentPage = 1;
 
-            var pagedQuery = query.OrderByDescending(x => x.EventTime)
+            // 1. Применяем динамическую сортировку перед пагинацией
+            query = ApplySorting(query);
+
+            // 2. Берем нужную страницу (жесткий OrderByDescending убрали)
+            var pagedQuery = query
                           .Skip((CurrentPage - 1) * PageSize)
                           .Take(PageSize);
 
             DataItems = new ObservableCollection<DataItem>(pagedQuery);
+        }
+
+        private IQueryable<DataItem> ApplySorting(IQueryable<DataItem> query)
+        {
+            return SortColumn switch
+            {
+                // Строковые и базовые данные
+                "RecordNumber" => SortDescending ? query.OrderByDescending(x => x.RecordNumber) : query.OrderBy(x => x.RecordNumber),
+                "Post" => SortDescending ? query.OrderByDescending(x => x.Post) : query.OrderBy(x => x.Post),
+                "Direction" => SortDescending ? query.OrderByDescending(x => x.Direction) : query.OrderBy(x => x.Direction),
+
+                // Временные метки
+                "EventTime" => SortDescending ? query.OrderByDescending(x => x.EventTime) : query.OrderBy(x => x.EventTime),
+                "TemperatureTime" => SortDescending ? query.OrderByDescending(x => x.TemperatureTime) : query.OrderBy(x => x.TemperatureTime),
+                "AlcotestTime" => SortDescending ? query.OrderByDescending(x => x.AlcotestTime) : query.OrderBy(x => x.AlcotestTime),
+
+                // Числовые показатели
+                "Temperature" => SortDescending ? query.OrderByDescending(x => x.Temperature) : query.OrderBy(x => x.Temperature),
+                "AlcotestResult" => SortDescending ? query.OrderByDescending(x => x.AlcotestResult) : query.OrderBy(x => x.AlcotestResult),
+
+                // Данные сотрудника
+                "FullName" => SortDescending ? query.OrderByDescending(x => x.FullName) : query.OrderBy(x => x.FullName),
+                "Position" => SortDescending ? query.OrderByDescending(x => x.Position) : query.OrderBy(x => x.Position),
+                "Department" => SortDescending ? query.OrderByDescending(x => x.Department) : query.OrderBy(x => x.Department),
+                "EmployeeNumber" => SortDescending ? query.OrderByDescending(x => x.EmployeeNumber) : query.OrderBy(x => x.EmployeeNumber),
+                "PassNumber" => SortDescending ? query.OrderByDescending(x => x.PassNumber) : query.OrderBy(x => x.PassNumber),
+
+                // По умолчанию (если колонка не найдена) сортируем по времени события от новых к старым
+                _ => query.OrderByDescending(x => x.EventTime)
+            };
         }
 
         // RelayCommand превратит этот метод в команду LoadDataCommand
@@ -169,26 +207,34 @@ namespace LogGate.ViewModels
             if (string.IsNullOrEmpty(value))
                 return;
 
+            var today = DateTime.Today;
+
             switch (value)
             {
                 case "Сегодня":
-                    StartDate = DateTime.Today;
-                    EndDate = DateTime.Today;
+                    StartDate = today;
+                    EndDate = today;
                     break;
 
                 case "Вчера":
-                    StartDate = DateTime.Today.AddDays(-1);
-                    EndDate = DateTime.Today.AddDays(-1);
+                    StartDate = today.AddDays(-1);
+                    EndDate = today.AddDays(-1);
                     break;
 
                 case "За 7 дней":
-                    StartDate = DateTime.Today.AddDays(-7);
-                    EndDate = DateTime.Today;
+                    StartDate = today.AddDays(-7);
+                    EndDate = today;
                     break;
 
                 case "Этот месяц":
-                    StartDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
-                    EndDate = DateTime.Today;
+                    StartDate = new DateTime(today.Year, today.Month, 1);
+                    EndDate = today;
+                    break;
+
+                case "Прошлый месяц":
+                    var firstDayOfThisMonth = new DateTime(today.Year, today.Month, 1);
+                    StartDate = firstDayOfThisMonth.AddMonths(-1);
+                    EndDate = firstDayOfThisMonth.AddDays(-1);
                     break;
             }
         }
@@ -198,6 +244,10 @@ namespace LogGate.ViewModels
         partial void OnShowLateArrivalsChanged(bool value) => ApplyFilters();
 
         partial void OnStartDateChanged(DateTime? value) => ApplyFilters();
+
+        partial void OnSortColumnChanged(string value) => ApplyFilters();
+
+        partial void OnSortDescendingChanged(bool value) => ApplyFilters();
 
         [RelayCommand]
         private void ResetFilters()

@@ -1,4 +1,5 @@
 ﻿using LogGate.Models;
+using LogGate.Services;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
@@ -14,34 +15,34 @@ namespace LogGate.Converters
             {
                 string? param = parameter.ToString();
 
-                // 1. Температура
-                if (param == "Temp" && item.Temperature != null)
+                switch (param)
                 {
-                    string? tempStr = item.Temperature?.ToString()?.Replace(',', '.');
-                    if (double.TryParse(tempStr, NumberStyles.Any, CultureInfo.InvariantCulture, out double temp))
-                        if (temp > 37.0) return new SolidColorBrush(Color.FromRgb(255, 236, 179));
-                }
+                    case "Temp":
+                        if (item.Temperature != null)
+                        {
+                            string? tempStr = item.Temperature?.ToString()?.Replace(',', '.');
+                            if (double.TryParse(tempStr, NumberStyles.Any, CultureInfo.InvariantCulture, out double temp))
+                            {
+                                if (temp > 37.0)
+                                    return new SolidColorBrush(Color.FromRgb(255, 236, 179));
+                            }
+                        }
+                        break;
 
-                // 2. Алкотестер
-                if (param == "Alco" && item.AlcotestResult > 0)
-                    return new SolidColorBrush(Color.FromRgb(255, 205, 210));
+                    case "Alco":
+                        if (item.AlcotestResult > 0)
+                            return new SolidColorBrush(Color.FromRgb(255, 205, 210));
+                        break;
 
-                if (param == "Time" && item.EventTime.HasValue && !string.IsNullOrEmpty(item.Direction))
-                {
-                    // Опоздание: Вход после 08:01:00
-                    if (item.Direction.StartsWith("Вх", StringComparison.OrdinalIgnoreCase) && item.EventTime.Value.TimeOfDay > new TimeSpan(8, 1, 0))
-                    {
-                        return new SolidColorBrush(Color.FromRgb(255, 205, 210)); // Красный
-                    }
+                    case "Time":
+                        if (ScheduleRules.IsLate(item))
+                            return Brushes.LightCoral;
 
-                    // Ушли рано: Выход до 16:30:00
-                    if (item.Direction.StartsWith("Вых", StringComparison.OrdinalIgnoreCase) && item.EventTime.Value.TimeOfDay < new TimeSpan(16, 30, 0))
-                    {
-                        return new SolidColorBrush(Color.FromRgb(255, 236, 179)); // Желтый
-                    }
+                        if (ScheduleRules.IsEarlyDeparture(item))
+                            return Brushes.LightYellow;
+                        break;
                 }
             }
-
             return DependencyProperty.UnsetValue;
         }
 
