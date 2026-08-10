@@ -2,6 +2,7 @@
 using LogGate.Interfaces;
 using LogGate.Services;
 using LogGate.ViewModels;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Threading;
 
@@ -42,6 +43,33 @@ namespace LogGate
         {
             if (DataContext is MainViewModel viewModel)
                 viewModel.Cleanup();
+        }
+
+        private void LogsDataGrid_Sorting(object sender, System.Windows.Controls.DataGridSortingEventArgs e)
+        {
+            e.Handled = true;
+
+            var columnPath = e.Column.SortMemberPath;
+            if (string.IsNullOrEmpty(columnPath)) return;
+
+            if (DataContext is MainViewModel vm)
+            {
+                // Меняем параметры сортировки во ViewModel
+                if (vm.SortColumn == columnPath)
+                    vm.SortDescending = !vm.SortDescending;
+                else
+                {
+                    vm.SortColumn = columnPath;
+                    vm.SortDescending = false;
+                }
+
+                e.Column.SortDirection = vm.SortDescending ? ListSortDirection.Descending : ListSortDirection.Ascending;
+
+                foreach (var col in LogsDataGrid.Columns)
+                {
+                    if (col != e.Column) col.SortDirection = null;
+                }
+            }
         }
     }
 }
