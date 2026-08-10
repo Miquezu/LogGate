@@ -4,8 +4,6 @@ using LogGate.Interfaces;
 using LogGate.Models;
 using LogGate.Services;
 using System.Collections.ObjectModel;
-
-namespace LogGate.ViewModels
 {
     public partial class MainViewModel : ObservableObject
     {
@@ -286,6 +284,24 @@ namespace LogGate.ViewModels
         {
             if (_dataRepository is IDisposable disposableRepo)
                 disposableRepo.Dispose();
+        }
+
+        [ObservableProperty]
+        private DataItem? _selectedItem;
+
+        // Команда для открытия карточки
+        [RelayCommand]
+        private void OpenEmployeeCard()
+        {
+            if (SelectedItem == null || string.IsNullOrEmpty(SelectedItem.FullName))
+                return;
+
+            // Создаем ViewModel для нового окна, передаем ФИО и репозиторий
+            var cardViewModel = new EmployeeCardViewModel(SelectedItem.FullName, _dataRepository);
+
+            // Создаем и показываем само окно
+            var cardWindow = new EmployeeCardWindow(cardViewModel);
+            cardWindow.Show(); // Show() позволяет открыть несколько карточек, ShowDialog() заблокирует главное окно
         }
     }
 }

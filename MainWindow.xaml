@@ -127,7 +127,9 @@
             HeadersVisibility="All"
             IsReadOnly="True"
             ItemsSource="{Binding DataItems}"
+            PreviewMouseDoubleClick="LogsDataGrid_PreviewMouseDoubleClick"
             RowHeight="33"
+            SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
             Sorting="LogsDataGrid_Sorting">
 
             <DataGrid.RowStyle>
@@ -135,6 +137,10 @@
                     <Setter Property="Background" Value="{Binding Converter={StaticResource AnomalyColorConverter}}" />
                 </Style>
             </DataGrid.RowStyle>
+
+            <DataGrid.InputBindings>
+                <MouseBinding Gesture="LeftDoubleClick" Command="{Binding OpenEmployeeCardCommand}" />
+            </DataGrid.InputBindings>
 
             <DataGrid.Columns>
                 <DataGridTextColumn

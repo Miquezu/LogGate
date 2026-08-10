@@ -1,9 +1,11 @@
 ﻿using LogGate.DataAccess;
 using LogGate.Interfaces;
+using LogGate.Models;
 using LogGate.Services;
 using LogGate.ViewModels;
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Threading;
 
 namespace LogGate
@@ -43,6 +45,18 @@ namespace LogGate
         {
             if (DataContext is MainViewModel viewModel)
                 viewModel.Cleanup();
+        }
+
+        private void LogsDataGrid_PreviewMouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (DataContext is not MainViewModel viewModel)
+                return;
+
+            if (LogsDataGrid.SelectedItem is DataItem item)
+                viewModel.SelectedItem = item;
+
+            if (viewModel.OpenEmployeeCardCommand.CanExecute(null))
+                viewModel.OpenEmployeeCardCommand.Execute(null);
         }
 
         private void LogsDataGrid_Sorting(object sender, System.Windows.Controls.DataGridSortingEventArgs e)
