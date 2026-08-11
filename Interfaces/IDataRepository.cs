@@ -7,5 +7,13 @@ namespace LogGate.Interfaces
         int SaveItems(IEnumerable<DataItem> items);
 
         IQueryable<DataItem> GetAllItems();
+
+        List<DateTime> GetShortenedDaysByYear(int year);
+
+        void SaveShortenedDays(IEnumerable<DateTime> dates);
+
+        List<WorkScheduleRule> GetAllWorkRules();
+
+        void SaveWorkRules(IEnumerable<WorkScheduleRule> rules);
     }
 }

@@ -24,22 +24,22 @@ namespace LogGate.Converters
                             if (double.TryParse(tempStr, NumberStyles.Any, CultureInfo.InvariantCulture, out double temp))
                             {
                                 if (temp > 37.0)
-                                    return new SolidColorBrush(Color.FromRgb(255, 236, 179));
+                                    return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFE0B2")); // Оранжевый
                             }
                         }
                         break;
 
                     case "Alco":
                         if (item.AlcotestResult > 0)
-                            return new SolidColorBrush(Color.FromRgb(255, 205, 210));
+                            return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFCDD2")); // Красный
                         break;
 
                     case "Time":
                         if (ScheduleRules.IsLate(item))
-                            return Brushes.LightCoral;
+                            return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFF9C4")); // Желтый
 
                         if (ScheduleRules.IsEarlyDeparture(item))
-                            return Brushes.LightYellow;
+                            return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFCCBC")); // Персиковый
                         break;
                 }
             }

@@ -1,6 +1,9 @@
 ﻿using LogGate.Interfaces;
 using LogGate.Models;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace LogGate.DataAccess
 {
@@ -37,6 +40,33 @@ namespace LogGate.DataAccess
         public IQueryable<DataItem> GetAllItems()
         {
             return _context.DataItems.AsNoTracking();
+        }
+
+        public List<DateTime> GetShortenedDaysByYear(int year)
+        {
+            return _context.ShortenedWorkDays
+                .Where(x => x.Date.Year == year)
+                .Select(x => x.Date)
+                .ToList();
+        }
+
+        public void SaveShortenedDays(IEnumerable<DateTime> dates)
+        {
+            var entities = dates.Select(d => new ShortenedWorkDay { Date = d });
+            _context.ShortenedWorkDays.AddRange(entities);
+            _context.SaveChanges();
+        }
+
+        public List<WorkScheduleRule> GetAllWorkRules()
+        {
+            return _context.WorkScheduleRules.ToList();
+        }
+
+        public void SaveWorkRules(IEnumerable<WorkScheduleRule> rules)
+        {
+            _context.WorkScheduleRules.RemoveRange(_context.WorkScheduleRules);
+            _context.WorkScheduleRules.AddRange(rules);
+            _context.SaveChanges();
         }
 
         public void Dispose() =>

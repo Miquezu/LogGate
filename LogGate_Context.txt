@@ -1,0 +1,1490 @@
+﻿
+--- App.xaml ---
+
+<Application x:Class="LogGate.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:LogGate"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <materialDesign:BundledTheme BaseTheme="Light" PrimaryColor="DeepPurple" SecondaryColor="Lime" />
+
+                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesign2.Defaults.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>
+
+--- App.xaml.cs ---
+
+using System.Configuration;
+using System.Data;
+using System.Windows;
+
+namespace LogGate
+{
+    /// <summary>
+    /// Interaction logic for App.xaml
+    /// </summary>
+    public partial class App : Application
+    {
+    }
+
+}
+
+--- AssemblyInfo.cs ---
+
+using System.Windows;
+
+[assembly: ThemeInfo(
+    ResourceDictionaryLocation.None,            //where theme specific resource dictionaries are located
+                                                //(used if a resource is not found in the page,
+                                                // or application resource dictionaries)
+    ResourceDictionaryLocation.SourceAssembly   //where the generic resource dictionary is located
+                                                //(used if a resource is not found in the page,
+                                                // app, or any theme specific resource dictionaries)
+)]
+
+--- MainWindow.xaml ---
+
+<Window
+    x:Class="LogGate.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:converters="clr-namespace:LogGate.Converters"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="clr-namespace:LogGate"
+    xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Title="Учет времени — Сводка"
+    Width="1200"
+    Height="600"
+    Background="#F5F6F8"
+    Closed="Window_Closed"
+    Style="{StaticResource MaterialDesignWindow}"
+    WindowStartupLocation="CenterScreen"
+    mc:Ignorable="d">
+    <Window.Resources>
+        <converters:AnomalyColorConverter x:Key="AnomalyColorConverter" />
+    </Window.Resources>
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Border
+            Margin="0,0,0,10"
+            Padding="12,8"
+            materialDesign:ElevationAssist.Elevation="Dp2"
+            Background="{DynamicResource MaterialDesignPaper}"
+            CornerRadius="8">
+
+            <WrapPanel VerticalAlignment="Center">
+                <Button
+                    Width="50"
+                    Height="50"
+                    Margin="0,0,10,0"
+                    Command="{Binding LoadDataCommand}"
+                    Style="{StaticResource MaterialDesignFloatingActionMiniButton}"
+                    ToolTip="Загрузить лог-файл CSV">
+
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon
+                            Width="24"
+                            Height="24"
+                            VerticalAlignment="Center"
+                            Kind="FolderUpload" />
+                    </StackPanel>
+                </Button>
+                <TextBox
+                    Width="250"
+                    Height="50"
+                    Margin="0,0,15,0"
+                    VerticalAlignment="Center"
+                    materialDesign:HintAssist.Hint="Поиск по ФИО, пропуску..."
+                    materialDesign:TextFieldAssist.HasClearButton="True"
+                    materialDesign:TextFieldAssist.LeadingIcon="Magnify"
+                    Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                    Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+                <ComboBox
+                    Width="150"
+                    Height="50"
+                    Margin="0,0,10,0"
+                    materialDesign:HintAssist.Hint="Выбор периода"
+                    ItemsSource="{Binding DatePresets}"
+                    SelectedItem="{Binding SelectedDatePreset}"
+                    Style="{StaticResource MaterialDesignOutlinedComboBox}" />
+                <DatePicker
+                    Width="140"
+                    Height="50"
+                    Margin="0,0,10,0"
+                    VerticalAlignment="Center"
+                    materialDesign:HintAssist.Hint="С даты"
+                    SelectedDate="{Binding StartDate}"
+                    Style="{StaticResource MaterialDesignOutlinedDatePicker}" />
+
+                <!--  Фильтр по дате "По"  -->
+                <DatePicker
+                    Width="140"
+                    Height="50"
+                    Margin="0,0,15,0"
+                    VerticalAlignment="Center"
+                    materialDesign:HintAssist.Hint="По дату"
+                    SelectedDate="{Binding EndDate}"
+                    Style="{StaticResource MaterialDesignOutlinedDatePicker}" />
+
+                <!--  Кнопка сброса фильтров  -->
+                <Button
+                    Height="50"
+                    VerticalAlignment="Center"
+                    Command="{Binding ResetFiltersCommand}"
+                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                    ToolTip="Сбросить все фильтры">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon
+                            Width="20"
+                            Height="20"
+                            Margin="0,0,6,0"
+                            VerticalAlignment="Center"
+                            Kind="FilterRemove" />
+                        <TextBlock VerticalAlignment="Center" Text="Сброс" />
+                    </StackPanel>
+                </Button>
+                <CheckBox
+                    Margin="0,0,15,0"
+                    VerticalAlignment="Center"
+                    Content="Опоздавшие"
+                    Cursor="Hand"
+                    IsChecked="{Binding ShowLateArrivals}" />
+                <CheckBox
+                    Margin="0,0,15,0"
+                    VerticalAlignment="Center"
+                    Content="Ушли рано"
+                    Cursor="Hand"
+                    IsChecked="{Binding ShowEarlyDepartures}" />
+
+                <!--  По желанию можно настроить внешний вид элементов (ItemTemplate)  -->
+            </WrapPanel>
+        </Border>
+        <DataGrid
+            x:Name="LogsDataGrid"
+            Grid.Row="1"
+            AlternatingRowBackground="#FFF0F0F0"
+            AutoGenerateColumns="False"
+            HeadersVisibility="All"
+            IsReadOnly="True"
+            ItemsSource="{Binding DataItems}"
+            PreviewMouseDoubleClick="LogsDataGrid_PreviewMouseDoubleClick"
+            RowHeight="33"
+            SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
+            Sorting="LogsDataGrid_Sorting">
+
+            <DataGrid.RowStyle>
+                <Style BasedOn="{StaticResource MaterialDesignDataGridRow}" TargetType="DataGridRow">
+                    <Setter Property="Background" Value="{Binding Converter={StaticResource AnomalyColorConverter}}" />
+                </Style>
+            </DataGrid.RowStyle>
+
+            <DataGrid.InputBindings>
+                <MouseBinding Gesture="LeftDoubleClick" Command="{Binding OpenEmployeeCardCommand}" />
+            </DataGrid.InputBindings>
+
+            <DataGrid.Columns>
+                <DataGridTextColumn
+                    Width="SizeToCells"
+                    Binding="{Binding EventTime, StringFormat=\{0:dd.MM.yy\}}"
+                    Header="Дата"
+                    SortMemberPath="EventTime" />
+                <DataGridTextColumn
+                    Width="SizeToCells"
+                    Binding="{Binding EventTime, StringFormat=\{0:HH:mm:ss\}}"
+                    Header="Время"
+                    SortMemberPath="EventTime">
+                    <DataGridTextColumn.CellStyle>
+                        <Style BasedOn="{StaticResource MaterialDesignDataGridCell}" TargetType="DataGridCell">
+                            <Setter Property="Background" Value="{Binding Converter={StaticResource AnomalyColorConverter}, ConverterParameter=Time}" />
+                        </Style>
+                    </DataGridTextColumn.CellStyle>
+                    <DataGridTextColumn.ElementStyle>
+                        <!--  Оставляем выравнивание текста по центру  -->
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Padding" Value="5,2" />
+                            <Setter Property="VerticalAlignment" Value="Center" />
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn
+                    Width="SizeToCells"
+                    Binding="{Binding Direction}"
+                    Header="Вх./выход"
+                    SortMemberPath="Direcrion" />
+                <DataGridTextColumn
+                    Width="SizeToCells"
+                    Binding="{Binding TemperatureTime, StringFormat=\{0:HH:mm:ss\}}"
+                    Header="Время 🌡️"
+                    SortMemberPath="TemperatureTime" />
+                <DataGridTextColumn
+                    Width="SizeToCells"
+                    Binding="{Binding Temperature}"
+                    Header="🌡️ °C"
+                    SortMemberPath="Temperature">
+                    <DataGridTextColumn.CellStyle>
+                        <Style BasedOn="{StaticResource MaterialDesignDataGridCell}" TargetType="DataGridCell">
+                            <Setter Property="Background" Value="{Binding Converter={StaticResource AnomalyColorConverter}, ConverterParameter=Temp}" />
+                        </Style>
+                    </DataGridTextColumn.CellStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn
+                    Width="SizeToCells"
+                    Binding="{Binding AlcotestTime, StringFormat=\{0:dd.MM.yy HH:mm:ss\}}"
+                    Header="Время алко."
+                    SortMemberPath="AlcotestTime" />
+                <DataGridTextColumn
+                    Width="SizeToCells"
+                    Binding="{Binding AlcotestResult}"
+                    Header="Результат алко."
+                    SortMemberPath="AlcotestResult">
+                    <DataGridTextColumn.CellStyle>
+                        <Style BasedOn="{StaticResource MaterialDesignDataGridCell}" TargetType="DataGridCell">
+                            <Setter Property="Background" Value="{Binding Converter={StaticResource AnomalyColorConverter}, ConverterParameter=Alco}" />
+                        </Style>
+                    </DataGridTextColumn.CellStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn
+                    Width="SizeToCells"
+                    Binding="{Binding FullName}"
+                    Header="ФИО"
+                    SortMemberPath="FullName" />
+                <DataGridTextColumn
+                    Width="200"
+                    Binding="{Binding Position}"
+                    Header="Должность"
+                    SortMemberPath="Position" />
+                <DataGridTextColumn
+                    Width="150"
+                    Binding="{Binding Department}"
+                    Header="Подразделение"
+                    SortMemberPath="Departament" />
+                <DataGridTextColumn
+                    Width="SizeToCells"
+                    Binding="{Binding EmployeeNumber}"
+                    Header="Таб. №"
+                    SortMemberPath="EmployeeNumber" />
+                <DataGridTextColumn
+                    Width="SizeToCells"
+                    Binding="{Binding PassNumber}"
+                    Header="Пропуск"
+                    SortMemberPath="PassNumber" />
+            </DataGrid.Columns>
+        </DataGrid>
+        <StatusBar
+            Grid.Row="2"
+            Padding="10,4"
+            materialDesign:ElevationAssist.Elevation="Dp1"
+            Background="{DynamicResource MaterialDesignPaper}">
+            <StatusBar.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <!--  Левая часть: Статус  -->
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <!--  Правая часть: Счетчики  -->
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                    </Grid>
+                </ItemsPanelTemplate>
+            </StatusBar.ItemsPanel>
+
+            <!--  1. Сообщение о статусе  -->
+            <StatusBarItem Grid.Column="0">
+                <StackPanel Orientation="Horizontal">
+                    <materialDesign:PackIcon
+                        Width="16"
+                        Height="16"
+                        Margin="0,0,6,0"
+                        VerticalAlignment="Center"
+                        Kind="InformationOutline"
+                        Opacity="0.7" />
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        Opacity="0.85"
+                        Text="{Binding StatusMessage}" />
+                </StackPanel>
+            </StatusBarItem>
+
+            <StatusBarItem Grid.Column="1" HorizontalAlignment="Center">
+                <StackPanel Orientation="Horizontal">
+                    <!--  Кнопка Назад  -->
+                    <Button
+                        Width="30"
+                        Height="30"
+                        Padding="0"
+                        Command="{Binding PreviousPageCommand}"
+                        Style="{StaticResource MaterialDesignToolButton}">
+                        <materialDesign:PackIcon Kind="ChevronLeft" />
+                    </Button>
+
+                    <!--  Индикатор страниц  -->
+                    <TextBlock Margin="15,0" VerticalAlignment="Center">
+                        <Run Text="Стр. " />
+                        <Run FontWeight="SemiBold" Text="{Binding CurrentPage}" />
+                        <Run Text=" из " />
+                        <Run Text="{Binding TotalPages}" />
+                    </TextBlock>
+
+                    <!--  Кнопка Вперед  -->
+                    <Button
+                        Width="30"
+                        Height="30"
+                        Padding="0"
+                        Command="{Binding NextPageCommand}"
+                        Style="{StaticResource MaterialDesignToolButton}">
+                        <materialDesign:PackIcon Kind="ChevronRight" />
+                    </Button>
+                </StackPanel>
+            </StatusBarItem>
+
+            <!--  2. Информация о количестве записей  -->
+            <StatusBarItem Grid.Column="2">
+                <StackPanel Orientation="Horizontal">
+                    <!--  Отображается, если применен фильтр  -->
+                    <StackPanel Margin="0,0,15,0" Orientation="Horizontal">
+                        <materialDesign:PackIcon
+                            Width="16"
+                            Height="16"
+                            Margin="0,0,5,0"
+                            VerticalAlignment="Center"
+                            Kind="FilterCheck"
+                            Opacity="0.7" />
+                        <TextBlock Opacity="0.7" Text="Показано: " />
+                        <TextBlock FontWeight="SemiBold" Text="{Binding FilteredCount}" />
+                    </StackPanel>
+
+                    <TextBlock
+                        Margin="0,0,15,0"
+                        Opacity="0.3"
+                        Text="|" />
+
+                    <!--  Всего записей  -->
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon
+                            Width="16"
+                            Height="16"
+                            Margin="0,0,5,0"
+                            VerticalAlignment="Center"
+                            Kind="Database"
+                            Opacity="0.7" />
+                        <TextBlock Opacity="0.7" Text="Всего в базе: " />
+                        <TextBlock FontWeight="SemiBold" Text="{Binding TotalCount}" />
+                    </StackPanel>
+                </StackPanel>
+            </StatusBarItem>
+        </StatusBar>
+    </Grid>
+</Window>
+
+--- MainWindow.xaml.cs ---
+
+using LogGate.DataAccess;
+using LogGate.Interfaces;
+using LogGate.Models;
+using LogGate.Services;
+using LogGate.ViewModels;
+using System.ComponentModel;
+using System.Windows;
+using System.Windows.Input;
+using System.Windows.Threading;
+
+namespace LogGate
+{
+    /// <summary>
+    /// Interaction logic for MainWindow.xaml
+    /// </summary>
+    public partial class MainWindow : Window
+    {
+        public MainWindow()
+        {
+            InitializeComponent();
+
+            DataContext = new MainViewModel(new CsvFileParser(), new DataRepository(), new OpenDialog());
+            this.Loaded += MainWindow_Loaded;
+        }
+
+        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is MainViewModel viewModel)
+                viewModel.PropertyChanged += ViewModel_PropertyChanged;
+        }
+
+        private void ViewModel_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == "CurrentPage")
+            {
+                Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    if (LogsDataGrid.Items.Count > 0)
+                        LogsDataGrid.ScrollIntoView(LogsDataGrid.Items[0]);
+                }), DispatcherPriority.ContextIdle);
+            }
+        }
+
+        private void Window_Closed(object sender, EventArgs e)
+        {
+            if (DataContext is MainViewModel viewModel)
+                viewModel.Cleanup();
+        }
+
+        private void LogsDataGrid_PreviewMouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (DataContext is not MainViewModel viewModel)
+                return;
+
+            if (LogsDataGrid.SelectedItem is DataItem item)
+                viewModel.SelectedItem = item;
+
+            if (viewModel.OpenEmployeeCardCommand.CanExecute(null))
+                viewModel.OpenEmployeeCardCommand.Execute(null);
+        }
+
+        private void LogsDataGrid_Sorting(object sender, System.Windows.Controls.DataGridSortingEventArgs e)
+        {
+            e.Handled = true;
+
+            var columnPath = e.Column.SortMemberPath;
+            if (string.IsNullOrEmpty(columnPath)) return;
+
+            if (DataContext is MainViewModel vm)
+            {
+                // Меняем параметры сортировки во ViewModel
+                if (vm.SortColumn == columnPath)
+                    vm.SortDescending = !vm.SortDescending;
+                else
+                {
+                    vm.SortColumn = columnPath;
+                    vm.SortDescending = false;
+                }
+
+                e.Column.SortDirection = vm.SortDescending ? ListSortDirection.Descending : ListSortDirection.Ascending;
+
+                foreach (var col in LogsDataGrid.Columns)
+                {
+                    if (col != e.Column) col.SortDirection = null;
+                }
+            }
+        }
+    }
+}
+
+--- AnomalyColorConverter.cs ---
+
+using LogGate.Models;
+using LogGate.Services;
+using System.Globalization;
+using System.Windows;
+using System.Windows.Data;
+using System.Windows.Media;
+
+namespace LogGate.Converters
+{
+    public class AnomalyColorConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is DataItem item && parameter != null)
+            {
+                string? param = parameter.ToString();
+
+                switch (param)
+                {
+                    case "Temp":
+                        if (item.Temperature != null)
+                        {
+                            string? tempStr = item.Temperature?.ToString()?.Replace(',', '.');
+                            if (double.TryParse(tempStr, NumberStyles.Any, CultureInfo.InvariantCulture, out double temp))
+                            {
+                                if (temp > 37.0)
+                                    return new SolidColorBrush(Color.FromRgb(255, 236, 179));
+                            }
+                        }
+                        break;
+
+                    case "Alco":
+                        if (item.AlcotestResult > 0)
+                            return new SolidColorBrush(Color.FromRgb(255, 205, 210));
+                        break;
+
+                    case "Time":
+                        if (ScheduleRules.IsLate(item))
+                            return Brushes.LightCoral;
+
+                        if (ScheduleRules.IsEarlyDeparture(item))
+                            return Brushes.LightYellow;
+                        break;
+                }
+            }
+            return DependencyProperty.UnsetValue;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+            throw new NotImplementedException();
+    }
+}
+
+--- AppDBContext.cs ---
+
+using LogGate.Models;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+
+namespace LogGate.DataAccess
+{
+    internal class AppDBContext : DbContext
+    {
+        public DbSet<DataItem> DataItems { get; set; }
+
+        public AppDBContext()
+        {
+            Database.Migrate();
+        }
+
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            var connectionString = "Data Source=app_data.db";
+            var connection = new SqliteConnection(connectionString);
+
+            connection.Open();
+
+            connection.CreateFunction("lower", (string x) =>
+            {
+                return x?.ToLower();
+            });
+
+            optionsBuilder.UseSqlite(connection);
+        }
+    }
+}
+
+--- DataRepository.cs ---
+
+using LogGate.Interfaces;
+using LogGate.Models;
+using Microsoft.EntityFrameworkCore;
+
+namespace LogGate.DataAccess
+{
+    internal class DataRepository : IDataRepository, IDisposable
+    {
+        private readonly AppDBContext _context;
+
+        public DataRepository()
+        {
+            _context = new AppDBContext();
+        }
+
+        public int SaveItems(IEnumerable<DataItem> items)
+        {
+            var existingKeys = _context.DataItems
+                .Select(x => new { x.RecordNumber, x.EventTime })
+                .AsEnumerable()
+                .Select(x => (x.RecordNumber, x.EventTime))
+                .ToHashSet();
+
+            var filteredItems = items
+                .Where(item => !existingKeys.Contains((item.RecordNumber, item.EventTime)))
+                .ToList();
+
+            if (filteredItems.Count != 0)
+            {
+                _context.DataItems.AddRange(filteredItems);
+                _context.SaveChanges();
+                return filteredItems.Count;
+            }
+            return 0;
+        }
+
+        public IQueryable<DataItem> GetAllItems()
+        {
+            return _context.DataItems.AsNoTracking();
+        }
+
+        public void Dispose() =>
+            _context?.Dispose();
+    }
+}
+
+--- IDataRepository.cs ---
+
+using LogGate.Models;
+
+namespace LogGate.Interfaces
+{
+    public interface IDataRepository
+    {
+        int SaveItems(IEnumerable<DataItem> items);
+
+        IQueryable<DataItem> GetAllItems();
+    }
+}
+
+--- IDialogService.cs ---
+
+namespace LogGate.Interfaces
+{
+    public interface IDialogService
+    {
+        string? OpenFileDialog();
+        void ShowMessage(string message);
+    }
+}
+
+--- IFileParser.cs ---
+
+using LogGate.Models;
+
+namespace LogGate.Interfaces
+{
+    public interface IFileParser
+    {
+        List<DataItem> Parse(string filePath);
+    }
+}
+
+--- 20260722132229_InitialCreate.cs ---
+
+using System;
+using Microsoft.EntityFrameworkCore.Migrations;
+
+#nullable disable
+
+namespace LogGate.Migrations
+{
+    /// <inheritdoc />
+    public partial class InitialCreate : Migration
+    {
+        /// <inheritdoc />
+        protected override void Up(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.CreateTable(
+                name: "DataItems",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    RecordNumber = table.Column<string>(type: "TEXT", nullable: true),
+                    Post = table.Column<string>(type: "TEXT", nullable: true),
+                    EventTime = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    Direction = table.Column<string>(type: "TEXT", nullable: true),
+                    TemperatureTime = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    Temperature = table.Column<double>(type: "REAL", nullable: true),
+                    AlcotestTime = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    AlcotestResult = table.Column<double>(type: "REAL", nullable: true),
+                    FullName = table.Column<string>(type: "TEXT", nullable: true),
+                    Position = table.Column<string>(type: "TEXT", nullable: true),
+                    Department = table.Column<string>(type: "TEXT", nullable: true),
+                    EmployeeNumber = table.Column<string>(type: "TEXT", nullable: true),
+                    PassNumber = table.Column<string>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_DataItems", x => x.Id);
+                });
+        }
+
+        /// <inheritdoc />
+        protected override void Down(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropTable(
+                name: "DataItems");
+        }
+    }
+}
+
+--- 20260722132229_InitialCreate.Designer.cs ---
+
+// <auto-generated />
+using System;
+using LogGate.DataAccess;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+
+#nullable disable
+
+namespace LogGate.Migrations
+{
+    [DbContext(typeof(AppDBContext))]
+    [Migration("20260722132229_InitialCreate")]
+    partial class InitialCreate
+    {
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        {
+#pragma warning disable 612, 618
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.10");
+
+            modelBuilder.Entity("LogGate.Models.DataItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double?>("AlcotestResult")
+                        .HasColumnType("REAL");
+
+                    b.Property<DateTime?>("AlcotestTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Department")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Direction")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EmployeeNumber")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("EventTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FullName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PassNumber")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Position")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Post")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RecordNumber")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double?>("Temperature")
+                        .HasColumnType("REAL");
+
+                    b.Property<DateTime?>("TemperatureTime")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DataItems");
+                });
+#pragma warning restore 612, 618
+        }
+    }
+}
+
+--- AppDBContextModelSnapshot.cs ---
+
+// <auto-generated />
+using System;
+using LogGate.DataAccess;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+
+#nullable disable
+
+namespace LogGate.Migrations
+{
+    [DbContext(typeof(AppDBContext))]
+    partial class AppDBContextModelSnapshot : ModelSnapshot
+    {
+        protected override void BuildModel(ModelBuilder modelBuilder)
+        {
+#pragma warning disable 612, 618
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.10");
+
+            modelBuilder.Entity("LogGate.Models.DataItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double?>("AlcotestResult")
+                        .HasColumnType("REAL");
+
+                    b.Property<DateTime?>("AlcotestTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Department")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Direction")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EmployeeNumber")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("EventTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FullName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PassNumber")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Position")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Post")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RecordNumber")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double?>("Temperature")
+                        .HasColumnType("REAL");
+
+                    b.Property<DateTime?>("TemperatureTime")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DataItems");
+                });
+#pragma warning restore 612, 618
+        }
+    }
+}
+
+--- DataItem.cs ---
+
+namespace LogGate.Models
+{
+    public class DataItem
+    {
+        public int Id { get; set; }
+
+        // 2. Данные напрямую из вашего файла
+        public string? RecordNumber { get; set; } // № п/п
+        public string? Post { get; set; }       // Пост
+        public DateTime? EventTime { get; set; }  // Время вх./вых.
+        public string? Direction { get; set; }   // Вх./Вых. (Вход или Выход)
+
+        public DateTime? TemperatureTime { get; set; } // Время темп-ры
+        public double? Temperature { get; set; }       // Темп-ра,°C
+
+        public DateTime? AlcotestTime { get; set; }  // Время алкотеста
+        public double? AlcotestResult { get; set; }  // Результат,мг/л
+
+        public string? FullName { get; set; }      // Ф.И.О. тестируемого
+        public string? Position { get; set; }     // Должность
+        public string? Department { get; set; }     // Подразделение
+        public string? EmployeeNumber { get; set; } // Таб.№
+        public string? PassNumber { get; set; }     // Пропуск
+
+    }
+}
+
+--- DataItemMap.cs ---
+
+using CsvHelper.Configuration;
+
+namespace LogGate.Models
+{
+    public sealed class DataItemMap: ClassMap<DataItem>
+    {
+        public DataItemMap() {
+            Map(m => m.Id).Ignore();
+
+            Map(m => m.RecordNumber).Name("№ п/п");
+            Map(m => m.Post).Name("Пост");
+            Map(m => m.EventTime).Name("Время вх./вых.");
+            Map(m => m.Direction).Name("Вх./Вых.");
+            Map(m => m.TemperatureTime).Name("Время темп-ры");
+            Map(m => m.Temperature).Name("Темп-ра,°C");
+            Map(m => m.AlcotestTime).Name("Время алкотеста");
+            Map(m => m.AlcotestResult).Name("Результат,мг/л");
+            Map(m => m.FullName).Name("Ф.И.О. тестируемого");
+            Map(m => m.Position).Name("Должность");
+            Map(m => m.Department).Name("Подразделение");
+            Map(m => m.EmployeeNumber).Name("Таб.№");
+            Map(m => m.PassNumber).Name("Пропуск");
+        }
+    }
+}
+
+--- CsvFileParser.cs ---
+
+using CsvHelper;
+using CsvHelper.Configuration;
+using LogGate.Interfaces;
+using LogGate.Models;
+using System.Globalization;
+using System.IO;
+
+namespace LogGate.Services
+{
+    public class CsvFileParser:IFileParser
+    {
+        public List<DataItem> Parse(string filePath)
+        {
+            var config = new CsvConfiguration(new CultureInfo("ru-RU"))
+            {
+                Delimiter = ";",
+                HasHeaderRecord = true,
+                MissingFieldFound = null, // Не ругаться, если ячейка пустая
+                BadDataFound = null       // Пропускать "битые" строки
+            };
+            
+            using var reader = new StreamReader(filePath);
+            using var csv = new CsvReader(reader, config);
+            csv.Context.RegisterClassMap<DataItemMap>();
+            var records = csv.GetRecords<DataItem>().ToList();
+
+            return records;
+        }
+
+    }
+}
+
+--- OpenDialog.cs ---
+
+using LogGate.Interfaces;
+using Microsoft.Win32;
+using System.Windows;
+
+namespace LogGate.Services
+{
+    public class OpenDialog:IDialogService
+    {
+        public string? OpenFileDialog()
+        {
+            var dialog = new OpenFileDialog
+            {
+                Title = "Выберите .csv файл",
+                Filter = "CSV files(*.csv)|*.csv|All files(*.*)|*.*"
+            };
+            bool? result = dialog.ShowDialog();
+            if(result == true) return dialog.FileName;
+            return null;
+        }
+        public void ShowMessage(string message) 
+            => MessageBox.Show(message, "Уведомление", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+}
+
+--- ScheduleRules.cs ---
+
+using LogGate.Models;
+using System;
+using System.Linq;
+using System.Linq.Expressions;
+
+namespace LogGate.Services
+{
+    public static class ScheduleRules
+    {
+        private static readonly string[] Shift730 = { "Ремонтно-механическая служба", "Слесарно-механическая мастерская", "Служба подготовки производства", "Столярный участок", "Участок машинной вышывки", "Участок пошива", "Участок раскроя", "Участок стёганных изделий", "Участок сувениров" };
+
+        private static readonly string[] Shift800 = { "Администрация", "Специалисты", };
+
+        private static readonly string[] Shift1000 = { "Магазин", };
+
+        private static Dictionary<int, int> _timeValues = new() { { 730, 451 }, { 730, 451 }, { 730, 451 } };
+
+        /// <summary>
+        /// Фильтр для поиска ОПОЗДАНИЙ (Вход позже положенного времени)
+        /// </summary>
+        public static Expression<Func<DataItem, bool>> IsLateExpression()
+        {
+            return x => x.EventTime.HasValue && x.Direction == "Вход" &&
+            (
+                // Опоздания группы 07:30 (> 450 минут)
+                (Shift730.Contains(x.Department) && (x.EventTime.Value.Hour * 60 + x.EventTime.Value.Minute > 451))
+                ||
+                // Опоздания группы 08:00 (> 480 минут)
+                (Shift800.Contains(x.Department) && (x.EventTime.Value.Hour * 60 + x.EventTime.Value.Minute > 481))
+                ||
+                (Shift1000.Contains(x.Department) && (x.EventTime.Value.Hour * 60 + x.EventTime.Value.Minute > 601))
+            );
+        }
+
+        public static Expression<Func<DataItem, bool>> IsEarlyDepartureExpression()
+        {
+            return x => x.EventTime.HasValue && x.Direction == "Выход" &&
+            (
+                (Shift730.Contains(x.Department) && (x.EventTime.Value.Hour * 60 + x.EventTime.Value.Minute < 939))
+                ||
+                (Shift800.Contains(x.Department) && (x.EventTime.Value.Hour * 60 + x.EventTime.Value.Minute < 969))
+                ||
+                (Shift1000.Contains(x.Department) && (x.EventTime.Value.Hour * 60 + x.EventTime.Value.Minute < 1080))
+            );
+        }
+
+        private static Func<DataItem, bool> _isLateFunc;
+
+        /// <summary>
+        /// Функция проверки на опоздание (выполняется в оперативной памяти для UI)
+        /// </summary>
+        public static Func<DataItem, bool> IsLate => _isLateFunc ??= IsLateExpression().Compile();
+
+        private static Func<DataItem, bool> _isEarlyDepartureFunc;
+
+        /// <summary>
+        /// Функция проверки на ранний уход (выполняется в оперативной памяти для UI)
+        /// </summary>
+        public static Func<DataItem, bool> IsEarlyDeparture => _isEarlyDepartureFunc ??= IsEarlyDepartureExpression().Compile();
+    }
+}
+
+--- EmployeeCardViewModel.cs ---
+
+using CommunityToolkit.Mvvm.ComponentModel;
+using LogGate.Interfaces;
+using LogGate.Models;
+using System.Collections.ObjectModel;
+
+namespace LogGate.ViewModels
+{
+    public partial class EmployeeCardViewModel : ObservableObject
+    {
+        private readonly IDataRepository _dataRepository;
+        private readonly string _employeeName;
+
+        [ObservableProperty]
+        private string _windowTitle;
+
+        [ObservableProperty]
+        private ObservableCollection<DataItem> _employeeHistory = [];
+
+        [ObservableProperty]
+        private int _totalRecords;
+
+        public EmployeeCardViewModel(string employeeName, IDataRepository dataRepository)
+        {
+            _employeeName = employeeName;
+            _dataRepository = dataRepository;
+
+            WindowTitle = $"История проходов: {_employeeName}";
+
+            LoadEmployeeData();
+        }
+
+        private void LoadEmployeeData()
+        {
+            // Вытягиваем из БД все записи по конкретному ФИО, сортируем от новых к старым
+            var history = _dataRepository.GetAllItems()
+                .Where(x => x.FullName == _employeeName)
+                .OrderByDescending(x => x.EventTime)
+                .ToList();
+
+            TotalRecords = history.Count;
+
+            foreach (var item in history)
+            {
+                EmployeeHistory.Add(item);
+            }
+        }
+    }
+}
+
+--- MainViewModel.cs ---
+
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using LogGate;
+using LogGate.Interfaces;
+using LogGate.Models;
+using LogGate.Services;
+using LogGate.ViewModels;
+using System.Collections.ObjectModel;
+
+public partial class MainViewModel : ObservableObject
+{
+    private readonly IDataRepository _dataRepository;
+    private readonly IDialogService _dialogService;
+    private readonly IFileParser _fileParser;
+
+    [ObservableProperty]
+    private ObservableCollection<DataItem> _dataItems = [];
+
+    [ObservableProperty]
+    private DateTime? _endDate = DateTime.Today;
+
+    [ObservableProperty]
+    private DateTime? _startDate = DateTime.Today;
+
+    [ObservableProperty]
+    private int _filteredCount;
+
+    private CancellationTokenSource? _searchCts;
+
+    [ObservableProperty]
+    private string _searchText = string.Empty;
+
+    [ObservableProperty]
+    private string? _selectedDatePreset = "Сегодня";
+
+    [ObservableProperty]
+    private TimeSpan _shiftEndTime = new(16, 30, 0);
+
+    [ObservableProperty]
+    private TimeSpan _shiftStartTime = new(8, 1, 0);
+
+    [ObservableProperty]
+    private bool _showEarlyDepartures;
+
+    [ObservableProperty]
+    private bool _showLateArrivals;
+
+    [ObservableProperty]
+    private string _statusMessage = "Готово";
+
+    [ObservableProperty]
+    private int _totalCount;
+
+    [ObservableProperty]
+    private int _currentPage = 1;
+
+    [ObservableProperty]
+    private int _totalPages = 1;
+
+    [ObservableProperty]
+    private int _pageSize = 200;
+
+    [ObservableProperty]
+    private string _sortColumn = "EventTime";
+
+    [ObservableProperty]
+    private bool _sortDescending = true;
+
+    public MainViewModel(IFileParser fileParser, IDataRepository dataRepository, IDialogService dialogService)
+    {
+        _dataRepository = dataRepository;
+        _fileParser = fileParser;
+        _dialogService = dialogService;
+
+        LoadDataFromDatabase();
+    }
+
+    public List<string> DatePresets { get; } =
+    [
+        "Сегодня",
+            "Вчера",
+            "За 7 дней",
+            "Этот месяц",
+            "Прошлый месяц"
+    ];
+
+    private void ApplyFilters(bool resetPage = true)
+    {
+        var query = _dataRepository.GetAllItems();
+
+        if (!string.IsNullOrWhiteSpace(SearchText))
+        {
+            var lowerText = SearchText.ToLower();
+            query = query.Where(x =>
+                (x.FullName != null && x.FullName.ToLower().Contains(lowerText)) ||
+                (x.PassNumber != null && x.PassNumber.ToLower().Contains(lowerText)) ||
+                (x.Department != null && x.Department.ToLower().Contains(lowerText))
+            );
+        }
+
+        if (StartDate.HasValue)
+            query = query.Where(x => x.EventTime >= StartDate.Value);
+
+        if (EndDate.HasValue)
+            query = query.Where(x => x.EventTime <= EndDate.Value.AddDays(1).AddTicks(-1));
+
+        if (ShowLateArrivals)
+            query = query.Where(ScheduleRules.IsLateExpression());
+
+        if (ShowEarlyDepartures)
+            query = query.Where(ScheduleRules.IsEarlyDepartureExpression());
+
+        FilteredCount = query.Count();
+        TotalPages = (int)Math.Ceiling((double)FilteredCount / PageSize);
+        if (TotalPages == 0)
+            TotalPages = 1;
+
+        if (resetPage)
+            CurrentPage = 1;
+
+        // 1. Применяем динамическую сортировку перед пагинацией
+        query = ApplySorting(query);
+
+        // 2. Берем нужную страницу (жесткий OrderByDescending убрали)
+        var pagedQuery = query
+                      .Skip((CurrentPage - 1) * PageSize)
+                      .Take(PageSize);
+
+        DataItems = new ObservableCollection<DataItem>(pagedQuery);
+    }
+
+    private IQueryable<DataItem> ApplySorting(IQueryable<DataItem> query)
+    {
+        return SortColumn switch
+        {
+            // Строковые и базовые данные
+            "RecordNumber" => SortDescending ? query.OrderByDescending(x => x.RecordNumber) : query.OrderBy(x => x.RecordNumber),
+            "Post" => SortDescending ? query.OrderByDescending(x => x.Post) : query.OrderBy(x => x.Post),
+            "Direction" => SortDescending ? query.OrderByDescending(x => x.Direction) : query.OrderBy(x => x.Direction),
+
+            // Временные метки
+            "EventTime" => SortDescending ? query.OrderByDescending(x => x.EventTime) : query.OrderBy(x => x.EventTime),
+            "TemperatureTime" => SortDescending ? query.OrderByDescending(x => x.TemperatureTime) : query.OrderBy(x => x.TemperatureTime),
+            "AlcotestTime" => SortDescending ? query.OrderByDescending(x => x.AlcotestTime) : query.OrderBy(x => x.AlcotestTime),
+
+            // Числовые показатели
+            "Temperature" => SortDescending ? query.OrderByDescending(x => x.Temperature) : query.OrderBy(x => x.Temperature),
+            "AlcotestResult" => SortDescending ? query.OrderByDescending(x => x.AlcotestResult) : query.OrderBy(x => x.AlcotestResult),
+
+            // Данные сотрудника
+            "FullName" => SortDescending ? query.OrderByDescending(x => x.FullName) : query.OrderBy(x => x.FullName),
+            "Position" => SortDescending ? query.OrderByDescending(x => x.Position) : query.OrderBy(x => x.Position),
+            "Department" => SortDescending ? query.OrderByDescending(x => x.Department) : query.OrderBy(x => x.Department),
+            "EmployeeNumber" => SortDescending ? query.OrderByDescending(x => x.EmployeeNumber) : query.OrderBy(x => x.EmployeeNumber),
+            "PassNumber" => SortDescending ? query.OrderByDescending(x => x.PassNumber) : query.OrderBy(x => x.PassNumber),
+
+            // По умолчанию (если колонка не найдена) сортируем по времени события от новых к старым
+            _ => query.OrderByDescending(x => x.EventTime)
+        };
+    }
+
+    // RelayCommand превратит этот метод в команду LoadDataCommand
+    [RelayCommand]
+    private void LoadData()
+    {
+        string? selectedPath = _dialogService.OpenFileDialog();
+
+        if (string.IsNullOrEmpty(selectedPath))
+            return;
+
+        var parsedData = _fileParser.Parse(selectedPath);
+        int addedCount = _dataRepository.SaveItems(parsedData);
+        LoadDataFromDatabase();
+
+        if (addedCount > 0)
+            _dialogService.ShowMessage($"Успешно добавлено новых записей: {addedCount}");
+        else
+            _dialogService.ShowMessage("Все записи из этого файла уже есть в базе данных.");
+    }
+
+    private void LoadDataFromDatabase()
+    {
+        TotalCount = _dataRepository.GetAllItems().Count();
+        ApplyFilters(resetPage: true);
+    }
+
+    partial void OnEndDateChanged(DateTime? value) => ApplyFilters();
+
+    async partial void OnSearchTextChanged(string value)
+    {
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+
+        try
+        {
+            await Task.Delay(400, token);
+            ApplyFilters();
+        }
+        catch (TaskCanceledException)
+        {
+        }
+    }
+
+    partial void OnSelectedDatePresetChanged(string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+            return;
+
+        var today = DateTime.Today;
+
+        switch (value)
+        {
+            case "Сегодня":
+                StartDate = today;
+                EndDate = today;
+                break;
+
+            case "Вчера":
+                StartDate = today.AddDays(-1);
+                EndDate = today.AddDays(-1);
+                break;
+
+            case "За 7 дней":
+                StartDate = today.AddDays(-7);
+                EndDate = today;
+                break;
+
+            case "Этот месяц":
+                StartDate = new DateTime(today.Year, today.Month, 1);
+                EndDate = today;
+                break;
+
+            case "Прошлый месяц":
+                var firstDayOfThisMonth = new DateTime(today.Year, today.Month, 1);
+                StartDate = firstDayOfThisMonth.AddMonths(-1);
+                EndDate = firstDayOfThisMonth.AddDays(-1);
+                break;
+        }
+    }
+
+    partial void OnShowEarlyDeparturesChanged(bool value) => ApplyFilters();
+
+    partial void OnShowLateArrivalsChanged(bool value) => ApplyFilters();
+
+    partial void OnStartDateChanged(DateTime? value) => ApplyFilters();
+
+    partial void OnSortColumnChanged(string value) => ApplyFilters();
+
+    partial void OnSortDescendingChanged(bool value) => ApplyFilters();
+
+    [RelayCommand]
+    private void ResetFilters()
+    {
+        SearchText = string.Empty;
+        StartDate = null;
+        EndDate = null;
+        SelectedDatePreset = null;
+        ShowLateArrivals = false;
+        ShowEarlyDepartures = false;
+
+        LoadDataFromDatabase();
+    }
+
+    [RelayCommand]
+    private void NextPage()
+    {
+        if (CurrentPage < TotalPages)
+        {
+            CurrentPage++;
+            ApplyFilters(resetPage: false);
+        }
+    }
+
+    [RelayCommand]
+    private void PreviousPage()
+    {
+        if (CurrentPage > 1)
+        {
+            CurrentPage--;
+            ApplyFilters(resetPage: false);
+        }
+    }
+
+    public void Cleanup()
+    {
+        if (_dataRepository is IDisposable disposableRepo)
+            disposableRepo.Dispose();
+    }
+
+    [ObservableProperty]
+    private DataItem? _selectedItem;
+
+    // Команда для открытия карточки
+    [RelayCommand]
+    private void OpenEmployeeCard()
+    {
+        if (SelectedItem == null || string.IsNullOrEmpty(SelectedItem.FullName))
+            return;
+
+        // Создаем ViewModel для нового окна, передаем ФИО и репозиторий
+        var cardViewModel = new EmployeeCardViewModel(SelectedItem.FullName, _dataRepository);
+
+        // Создаем и показываем само окно
+        var cardWindow = new EmployeeCardWindow(cardViewModel);
+        cardWindow.Show(); // Show() позволяет открыть несколько карточек, ShowDialog() заблокирует главное окно
+    }
+}
+
+--- EmployeeCardWindow.xaml ---
+
+<Window x:Class="LogGate.EmployeeCardWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:converters="clr-namespace:LogGate.Converters"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:LogGate"
+        mc:Ignorable="d"
+        Title="{Binding WindowTitle}"
+        Height="450" Width="800">
+    <Window.Resources>
+        <converters:AnomalyColorConverter x:Key="AnomalyColorConverter" />
+    </Window.Resources>
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Шапка со статистикой -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+            <TextBlock Text="Всего записей в базе: " FontWeight="Bold" />
+            <TextBlock Text="{Binding TotalRecords}" />
+        </StackPanel>
+
+        <!-- Таблица проходов конкретного сотрудника -->
+        <DataGrid Grid.Row="1" ItemsSource="{Binding EmployeeHistory}"
+                  AutoGenerateColumns="False" IsReadOnly="True">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Дата и Время" Binding="{Binding EventTime, StringFormat=\{0:dd.MM.yyyy HH:mm:ss\}}">
+                    <DataGridTextColumn.CellStyle>
+                        <Style BasedOn="{StaticResource MaterialDesignDataGridCell}" TargetType="DataGridCell">
+                            <Setter Property="Background" Value="{Binding Converter={StaticResource AnomalyColorConverter}, ConverterParameter=Time}" />
+                        </Style>
+                    </DataGridTextColumn.CellStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="Направление" Binding="{Binding Direction}" />
+                <DataGridTextColumn Header="Температура" Binding="{Binding Temperature}">
+                    <DataGridTextColumn.CellStyle>
+                        <Style BasedOn="{StaticResource MaterialDesignDataGridCell}" TargetType="DataGridCell">
+                            <Setter Property="Background" Value="{Binding Converter={StaticResource AnomalyColorConverter}, ConverterParameter=Temp}" />
+                        </Style>
+                    </DataGridTextColumn.CellStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="Алкотестер" Binding="{Binding AlcotestResult}">
+                    <DataGridTextColumn.CellStyle>
+                        <Style BasedOn="{StaticResource MaterialDesignDataGridCell}" TargetType="DataGridCell">
+                            <Setter Property="Background" Value="{Binding Converter={StaticResource AnomalyColorConverter}, ConverterParameter=Alco}" />
+                        </Style>
+                    </DataGridTextColumn.CellStyle>
+                </DataGridTextColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</Window>
+
+--- EmployeeCardWindow.xaml.cs ---
+
+using LogGate.ViewModels;
+using System;
+using System.Collections.Generic;
+using System.Text;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Shapes;
+
+namespace LogGate
+{
+    /// <summary>
+    /// Логика взаимодействия для EmployeeCardWindow.xaml
+    /// </summary>
+    public partial class EmployeeCardWindow : Window
+    {
+        public EmployeeCardWindow(EmployeeCardViewModel viewModel)
+        {
+            InitializeComponent();
+            DataContext = viewModel;
+        }
+    }
+}
