@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LogGate.ViewModels;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Windows;
@@ -17,9 +18,10 @@ namespace LogGate.Views
     /// </summary>
     public partial class ScheduleSettingsWindow : Window
     {
-        public ScheduleSettingsWindow()
+        public ScheduleSettingsWindow(ScheduleSettingsViewModel viewModel)
         {
             InitializeComponent();
+            DataContext = viewModel;
         }
     }
 }

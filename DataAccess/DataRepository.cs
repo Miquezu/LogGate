@@ -64,9 +64,29 @@ namespace LogGate.DataAccess
 
         public void SaveWorkRules(IEnumerable<WorkScheduleRule> rules)
         {
-            _context.WorkScheduleRules.RemoveRange(_context.WorkScheduleRules);
-            _context.WorkScheduleRules.AddRange(rules);
-            _context.SaveChanges();
+            // 1. Находим все текущие правила, удаляем их и СРАЗУ фиксируем удаление в БД
+            var existingRules = _context.WorkScheduleRules.ToList();
+            if (existingRules.Any())
+            {
+                _context.WorkScheduleRules.RemoveRange(existingRules);
+                _context.SaveChanges(); // Обязательный шаг перед добавлением новых
+            }
+
+            // 2. Создаем абсолютно новые, "чистые" копии объектов без привязки к старым Id
+            var cleanRules = rules.Select(r => new WorkScheduleRule
+            {
+                TargetName = r.TargetName,
+                IsPersonal = r.IsPersonal,
+                StartTime = r.StartTime,
+                EndTime = r.EndTime
+            }).ToList();
+
+            // 3. Записываем чистые копии и сохраняем
+            if (cleanRules.Any())
+            {
+                _context.WorkScheduleRules.AddRange(cleanRules);
+                _context.SaveChanges();
+            }
         }
 
         public void Dispose() =>

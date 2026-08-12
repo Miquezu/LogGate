@@ -89,6 +89,7 @@
                 <!--  Кнопка сброса фильтров  -->
                 <Button
                     Height="50"
+                    Margin="0,0,15,0"
                     VerticalAlignment="Center"
                     Command="{Binding ResetFiltersCommand}"
                     Style="{StaticResource MaterialDesignOutlinedButton}"
@@ -103,18 +104,35 @@
                         <TextBlock VerticalAlignment="Center" Text="Сброс" />
                     </StackPanel>
                 </Button>
-                <CheckBox
+                <Button
+                    Height="50"
                     Margin="0,0,15,0"
                     VerticalAlignment="Center"
-                    Content="Опоздавшие"
-                    Cursor="Hand"
-                    IsChecked="{Binding ShowLateArrivals}" />
-                <CheckBox
-                    Margin="0,0,15,0"
-                    VerticalAlignment="Center"
-                    Content="Ушли рано"
-                    Cursor="Hand"
-                    IsChecked="{Binding ShowEarlyDepartures}" />
+                    Command="{Binding OpenScheduleSettingsCommand}"
+                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                    ToolTip="Настроить индивидуальные графики и смены">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon
+                            Width="20"
+                            Height="20"
+                            Margin="0,0,6,0"
+                            VerticalAlignment="Center"
+                            Kind="Cog" />
+                        <TextBlock VerticalAlignment="Center" Text="Графики" />
+                    </StackPanel>
+                </Button>
+                <StackPanel>
+                    <CheckBox
+                        VerticalAlignment="Center"
+                        Content="Опоздавшие"
+                        Cursor="Hand"
+                        IsChecked="{Binding ShowLateArrivals}" />
+                    <CheckBox
+                        VerticalAlignment="Center"
+                        Content="Ушли рано"
+                        Cursor="Hand"
+                        IsChecked="{Binding ShowEarlyDepartures}" />
+                </StackPanel>
 
                 <!--  По желанию можно настроить внешний вид элементов (ItemTemplate)  -->
             </WrapPanel>
@@ -139,7 +157,7 @@
             </DataGrid.RowStyle>
 
             <DataGrid.InputBindings>
-                <MouseBinding Gesture="LeftDoubleClick" Command="{Binding OpenEmployeeCardCommand}" />
+                <MouseBinding Command="{Binding OpenEmployeeCardCommand}" Gesture="LeftDoubleClick" />
             </DataGrid.InputBindings>
 
             <DataGrid.Columns>
@@ -188,7 +206,7 @@
                     </DataGridTextColumn.CellStyle>
                 </DataGridTextColumn>
                 <DataGridTextColumn
-                    Width="SizeToCells"
+                    Width="100"
                     Binding="{Binding AlcotestTime, StringFormat=\{0:dd.MM.yy HH:mm:ss\}}"
                     Header="Время алко."
                     SortMemberPath="AlcotestTime" />

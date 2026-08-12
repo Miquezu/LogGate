@@ -5,6 +5,7 @@ using LogGate.Interfaces;
 using LogGate.Models;
 using LogGate.Services;
 using LogGate.ViewModels;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using System.Collections.ObjectModel;
 
 public partial class MainViewModel : ObservableObject
@@ -315,7 +316,6 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private DataItem? _selectedItem;
 
-    // Команда для открытия карточки
     [RelayCommand]
     private void OpenEmployeeCard()
     {
@@ -328,5 +328,14 @@ public partial class MainViewModel : ObservableObject
         // Создаем и показываем само окно
         var cardWindow = new EmployeeCardWindow(cardViewModel);
         cardWindow.Show(); // Show() позволяет открыть несколько карточек, ShowDialog() заблокирует главное окно
+    }
+
+    [RelayCommand]
+    private void OpenScheduleSettings()
+    {
+        var settingsViewModel = new ScheduleSettingsViewModel(_dataRepository, _dialogService);
+        var settingsWindow = new LogGate.Views.ScheduleSettingsWindow(settingsViewModel);
+        settingsWindow.ShowDialog();
+        ApplyFilters();
     }
 }

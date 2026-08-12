@@ -72,9 +72,7 @@ namespace LogGate.ViewModels
         private void DeleteRule()
         {
             if (SelectedRule != null)
-            {
                 Rules.Remove(SelectedRule);
-            }
         }
 
         [RelayCommand]
