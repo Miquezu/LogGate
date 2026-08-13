@@ -2,9 +2,10 @@
 
 namespace LogGate.Models
 {
-    public sealed class DataItemMap: ClassMap<DataItem>
+    public sealed class DataItemMap : ClassMap<DataItem>
     {
-        public DataItemMap() {
+        public DataItemMap()
+        {
             Map(m => m.Id).Ignore();
 
             Map(m => m.RecordNumber).Name("№ п/п");

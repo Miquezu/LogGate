@@ -5,7 +5,6 @@ using LogGate.Interfaces;
 using LogGate.Models;
 using LogGate.Services;
 using LogGate.ViewModels;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using System.Collections.ObjectModel;
 
 public partial class MainViewModel : ObservableObject
@@ -15,16 +14,19 @@ public partial class MainViewModel : ObservableObject
     private readonly IFileParser _fileParser;
 
     [ObservableProperty]
+    private int _currentPage = 1;
+
+    [ObservableProperty]
     private ObservableCollection<DataItem> _dataItems = [];
 
     [ObservableProperty]
     private DateTime? _endDate = DateTime.Today;
 
     [ObservableProperty]
-    private DateTime? _startDate = DateTime.Today;
+    private int _filteredCount;
 
     [ObservableProperty]
-    private int _filteredCount;
+    private int _pageSize = 200;
 
     private CancellationTokenSource? _searchCts;
 
@@ -33,6 +35,9 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     private string? _selectedDatePreset = "Сегодня";
+
+    [ObservableProperty]
+    private DataItem? _selectedItem;
 
     [ObservableProperty]
     private TimeSpan _shiftEndTime = new(16, 30, 0);
@@ -47,25 +52,22 @@ public partial class MainViewModel : ObservableObject
     private bool _showLateArrivals;
 
     [ObservableProperty]
+    private string _sortColumn = "EventTime";
+
+    [ObservableProperty]
+    private bool _sortDescending = true;
+
+    [ObservableProperty]
+    private DateTime? _startDate = DateTime.Today;
+
+    [ObservableProperty]
     private string _statusMessage = "Готово";
 
     [ObservableProperty]
     private int _totalCount;
 
     [ObservableProperty]
-    private int _currentPage = 1;
-
-    [ObservableProperty]
     private int _totalPages = 1;
-
-    [ObservableProperty]
-    private int _pageSize = 200;
-
-    [ObservableProperty]
-    private string _sortColumn = "EventTime";
-
-    [ObservableProperty]
-    private bool _sortDescending = true;
 
     public MainViewModel(IFileParser fileParser, IDataRepository dataRepository, IDialogService dialogService)
     {
@@ -78,22 +80,6 @@ public partial class MainViewModel : ObservableObject
         LoadDataFromDatabase();
     }
 
-    private async Task InitializeCalendarAsync()
-    {
-        int currentYear = DateTime.Now.Year;
-
-        var cachedDays = _dataRepository.GetShortenedDaysByYear(currentYear);
-
-        // 1. Получаем список предпраздничных дней (как делали раньше)
-        var cachedHolidays = _dataRepository.GetShortenedDaysByYear(currentYear);
-
-        // 2. Получаем все графики из новой таблицы
-        var workRules = _dataRepository.GetAllWorkRules();
-
-        // 3. Загружаем всё в движок
-        ScheduleRules.UpdateRules(workRules, cachedHolidays);
-    }
-
     public List<string> DatePresets { get; } =
     [
             "Сегодня",
@@ -103,6 +89,12 @@ public partial class MainViewModel : ObservableObject
             "Прошлый месяц",
             "Сначала года"
     ];
+
+    public void Cleanup()
+    {
+        if (_dataRepository is IDisposable disposableRepo)
+            disposableRepo.Dispose();
+    }
 
     private void ApplyFilters(bool resetPage = true)
     {
@@ -153,21 +145,14 @@ public partial class MainViewModel : ObservableObject
     {
         return SortColumn switch
         {
-            // Строковые и базовые данные
             "RecordNumber" => SortDescending ? query.OrderByDescending(x => x.RecordNumber) : query.OrderBy(x => x.RecordNumber),
             "Post" => SortDescending ? query.OrderByDescending(x => x.Post) : query.OrderBy(x => x.Post),
             "Direction" => SortDescending ? query.OrderByDescending(x => x.Direction) : query.OrderBy(x => x.Direction),
-
-            // Временные метки
             "EventTime" => SortDescending ? query.OrderByDescending(x => x.EventTime) : query.OrderBy(x => x.EventTime),
             "TemperatureTime" => SortDescending ? query.OrderByDescending(x => x.TemperatureTime) : query.OrderBy(x => x.TemperatureTime),
             "AlcotestTime" => SortDescending ? query.OrderByDescending(x => x.AlcotestTime) : query.OrderBy(x => x.AlcotestTime),
-
-            // Числовые показатели
             "Temperature" => SortDescending ? query.OrderByDescending(x => x.Temperature) : query.OrderBy(x => x.Temperature),
             "AlcotestResult" => SortDescending ? query.OrderByDescending(x => x.AlcotestResult) : query.OrderBy(x => x.AlcotestResult),
-
-            // Данные сотрудника
             "FullName" => SortDescending ? query.OrderByDescending(x => x.FullName) : query.OrderBy(x => x.FullName),
             "Position" => SortDescending ? query.OrderByDescending(x => x.Position) : query.OrderBy(x => x.Position),
             "Department" => SortDescending ? query.OrderByDescending(x => x.Department) : query.OrderBy(x => x.Department),
@@ -177,6 +162,15 @@ public partial class MainViewModel : ObservableObject
             // По умолчанию (если колонка не найдена) сортируем по времени события от новых к старым
             _ => query.OrderByDescending(x => x.EventTime)
         };
+    }
+
+    private async Task InitializeCalendarAsync()
+    {
+        int currentYear = DateTime.Now.Year;
+        var cachedDays = _dataRepository.GetShortenedDaysByYear(currentYear);
+        var cachedHolidays = _dataRepository.GetShortenedDaysByYear(currentYear);
+        var workRules = _dataRepository.GetAllWorkRules();
+        ScheduleRules.UpdateRules(workRules, cachedHolidays);
     }
 
     // RelayCommand превратит этот метод в команду LoadDataCommand
@@ -202,6 +196,16 @@ public partial class MainViewModel : ObservableObject
     {
         TotalCount = _dataRepository.GetAllItems().Count();
         ApplyFilters(resetPage: true);
+    }
+
+    [RelayCommand]
+    private void NextPage()
+    {
+        if (CurrentPage < TotalPages)
+        {
+            CurrentPage++;
+            ApplyFilters(resetPage: false);
+        }
     }
 
     partial void OnEndDateChanged(DateTime? value) => ApplyFilters();
@@ -268,53 +272,11 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnShowLateArrivalsChanged(bool value) => ApplyFilters();
 
-    partial void OnStartDateChanged(DateTime? value) => ApplyFilters();
-
     partial void OnSortColumnChanged(string value) => ApplyFilters();
 
     partial void OnSortDescendingChanged(bool value) => ApplyFilters();
 
-    [RelayCommand]
-    private void ResetFilters()
-    {
-        SearchText = string.Empty;
-        StartDate = null;
-        EndDate = null;
-        SelectedDatePreset = null;
-        ShowLateArrivals = false;
-        ShowEarlyDepartures = false;
-
-        LoadDataFromDatabase();
-    }
-
-    [RelayCommand]
-    private void NextPage()
-    {
-        if (CurrentPage < TotalPages)
-        {
-            CurrentPage++;
-            ApplyFilters(resetPage: false);
-        }
-    }
-
-    [RelayCommand]
-    private void PreviousPage()
-    {
-        if (CurrentPage > 1)
-        {
-            CurrentPage--;
-            ApplyFilters(resetPage: false);
-        }
-    }
-
-    public void Cleanup()
-    {
-        if (_dataRepository is IDisposable disposableRepo)
-            disposableRepo.Dispose();
-    }
-
-    [ObservableProperty]
-    private DataItem? _selectedItem;
+    partial void OnStartDateChanged(DateTime? value) => ApplyFilters();
 
     [RelayCommand]
     private void OpenEmployeeCard()
@@ -337,5 +299,28 @@ public partial class MainViewModel : ObservableObject
         var settingsWindow = new LogGate.Views.ScheduleSettingsWindow(settingsViewModel);
         settingsWindow.ShowDialog();
         ApplyFilters();
+    }
+
+    [RelayCommand]
+    private void PreviousPage()
+    {
+        if (CurrentPage > 1)
+        {
+            CurrentPage--;
+            ApplyFilters(resetPage: false);
+        }
+    }
+
+    [RelayCommand]
+    private void ResetFilters()
+    {
+        SearchText = string.Empty;
+        StartDate = null;
+        EndDate = null;
+        SelectedDatePreset = null;
+        ShowLateArrivals = false;
+        ShowEarlyDepartures = false;
+
+        LoadDataFromDatabase();
     }
 }

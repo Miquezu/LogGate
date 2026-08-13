@@ -4,15 +4,15 @@ namespace LogGate.Interfaces
 {
     public interface IDataRepository
     {
-        int SaveItems(IEnumerable<DataItem> items);
-
         IQueryable<DataItem> GetAllItems();
+
+        List<WorkScheduleRule> GetAllWorkRules();
 
         List<DateTime> GetShortenedDaysByYear(int year);
 
-        void SaveShortenedDays(IEnumerable<DateTime> dates);
+        int SaveItems(IEnumerable<DataItem> items);
 
-        List<WorkScheduleRule> GetAllWorkRules();
+        void SaveShortenedDays(IEnumerable<DateTime> dates);
 
         void SaveWorkRules(IEnumerable<WorkScheduleRule> rules);
     }

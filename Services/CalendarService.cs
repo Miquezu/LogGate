@@ -13,8 +13,6 @@ namespace LogGate.Services
         public async Task<List<DateTime>> GetPreHolidaysAsync(int year)
         {
             var preHolidays = new List<DateTime>();
-
-            // Добавлен параметр cc=by для производственного календаря Беларуси
             string url = $"https://isdayoff.ru/api/getdata?year={year}&pre=1&cc=by";
 
             try

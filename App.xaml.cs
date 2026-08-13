@@ -1,7 +1,5 @@
 ﻿using LogGate.DataAccess;
 using Microsoft.EntityFrameworkCore;
-using System.Configuration;
-using System.Data;
 using System.Windows;
 
 namespace LogGate

@@ -11,13 +11,13 @@ namespace LogGate.ViewModels
         private readonly string _employeeName;
 
         [ObservableProperty]
-        private string _windowTitle;
-
-        [ObservableProperty]
         private ObservableCollection<DataItem> _employeeHistory = [];
 
         [ObservableProperty]
         private int _totalRecords;
+
+        [ObservableProperty]
+        private string _windowTitle;
 
         public EmployeeCardViewModel(string employeeName, IDataRepository dataRepository)
         {

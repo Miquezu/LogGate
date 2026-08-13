@@ -6,13 +6,13 @@ namespace LogGate.DataAccess
 {
     internal class AppDBContext : DbContext
     {
-        public DbSet<DataItem> DataItems { get; set; }
-        public DbSet<ShortenedWorkDay> ShortenedWorkDays { get; set; }
-        public DbSet<WorkScheduleRule> WorkScheduleRules { get; set; }
-
         public AppDBContext()
         {
         }
+
+        public DbSet<DataItem> DataItems { get; set; }
+        public DbSet<ShortenedWorkDay> ShortenedWorkDays { get; set; }
+        public DbSet<WorkScheduleRule> WorkScheduleRules { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {

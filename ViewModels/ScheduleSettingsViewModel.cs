@@ -3,10 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using LogGate.Interfaces;
 using LogGate.Models;
 using LogGate.Services;
-using System;
 using System.Collections.ObjectModel;
-using System.Data;
-using System.Linq;
 
 namespace LogGate.ViewModels
 {
@@ -16,13 +13,7 @@ namespace LogGate.ViewModels
         private readonly IDialogService _dialogService;
 
         [ObservableProperty]
-        private ObservableCollection<WorkScheduleRule> _rules = [];
-
-        [ObservableProperty]
-        private WorkScheduleRule? _selectedRule;
-
-        [ObservableProperty]
-        private string _newTargetName = string.Empty;
+        private DateTime? _newEndTime = new DateTime(2000, 1, 1, 16, 30, 0);
 
         [ObservableProperty]
         private bool _newIsPersonal;
@@ -32,19 +23,19 @@ namespace LogGate.ViewModels
         private DateTime? _newStartTime = new DateTime(2000, 1, 1, 8, 0, 0);
 
         [ObservableProperty]
-        private DateTime? _newEndTime = new DateTime(2000, 1, 1, 16, 30, 0);
+        private string _newTargetName = string.Empty;
+
+        [ObservableProperty]
+        private ObservableCollection<WorkScheduleRule> _rules = [];
+
+        [ObservableProperty]
+        private WorkScheduleRule? _selectedRule;
 
         public ScheduleSettingsViewModel(IDataRepository dataRepository, IDialogService dialogService)
         {
             _dataRepository = dataRepository;
             _dialogService = dialogService;
             LoadRules();
-        }
-
-        private void LoadRules()
-        {
-            var dbRules = _dataRepository.GetAllWorkRules();
-            Rules = new ObservableCollection<WorkScheduleRule>(dbRules);
         }
 
         [RelayCommand]
@@ -73,6 +64,12 @@ namespace LogGate.ViewModels
         {
             if (SelectedRule != null)
                 Rules.Remove(SelectedRule);
+        }
+
+        private void LoadRules()
+        {
+            var dbRules = _dataRepository.GetAllWorkRules();
+            Rules = new ObservableCollection<WorkScheduleRule>(dbRules);
         }
 
         [RelayCommand]

@@ -1,9 +1,6 @@
 ﻿using LogGate.Interfaces;
 using LogGate.Models;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace LogGate.DataAccess
 {
@@ -15,6 +12,21 @@ namespace LogGate.DataAccess
         {
             _context = new AppDBContext();
         }
+
+        public void Dispose() =>
+            _context?.Dispose();
+
+        public IQueryable<DataItem> GetAllItems() =>
+            _context.DataItems.AsNoTracking();
+
+        public List<WorkScheduleRule> GetAllWorkRules() =>
+            _context.WorkScheduleRules.ToList();
+
+        public List<DateTime> GetShortenedDaysByYear(int year) =>
+             _context.ShortenedWorkDays
+                .Where(x => x.Date.Year == year)
+                .Select(x => x.Date)
+                .ToList();
 
         public int SaveItems(IEnumerable<DataItem> items)
         {
@@ -37,29 +49,11 @@ namespace LogGate.DataAccess
             return 0;
         }
 
-        public IQueryable<DataItem> GetAllItems()
-        {
-            return _context.DataItems.AsNoTracking();
-        }
-
-        public List<DateTime> GetShortenedDaysByYear(int year)
-        {
-            return _context.ShortenedWorkDays
-                .Where(x => x.Date.Year == year)
-                .Select(x => x.Date)
-                .ToList();
-        }
-
         public void SaveShortenedDays(IEnumerable<DateTime> dates)
         {
             var entities = dates.Select(d => new ShortenedWorkDay { Date = d });
             _context.ShortenedWorkDays.AddRange(entities);
             _context.SaveChanges();
-        }
-
-        public List<WorkScheduleRule> GetAllWorkRules()
-        {
-            return _context.WorkScheduleRules.ToList();
         }
 
         public void SaveWorkRules(IEnumerable<WorkScheduleRule> rules)
@@ -69,7 +63,7 @@ namespace LogGate.DataAccess
             if (existingRules.Any())
             {
                 _context.WorkScheduleRules.RemoveRange(existingRules);
-                _context.SaveChanges(); // Обязательный шаг перед добавлением новых
+                _context.SaveChanges();
             }
 
             // 2. Создаем абсолютно новые, "чистые" копии объектов без привязки к старым Id
@@ -88,8 +82,5 @@ namespace LogGate.DataAccess
                 _context.SaveChanges();
             }
         }
-
-        public void Dispose() =>
-            _context?.Dispose();
     }
 }

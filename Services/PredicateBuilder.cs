@@ -1,13 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq.Expressions;
-using System.Text;
+﻿using System.Linq.Expressions;
 
 namespace LogGate.Services
 {
     public static class PredicateBuilder
     {
-        // Базовое пустое выражение, которое возвращает false
         public static Expression<Func<T, bool>> False<T>() => f => false;
 
         // Метод, который склеивает два выражения через логическое ИЛИ (OR)
@@ -26,8 +22,8 @@ namespace LogGate.Services
 
         private class ReplaceExpressionVisitor : ExpressionVisitor
         {
-            private readonly Expression _oldValue;
             private readonly Expression _newValue;
+            private readonly Expression _oldValue;
 
             public ReplaceExpressionVisitor(Expression oldValue, Expression newValue)
             {

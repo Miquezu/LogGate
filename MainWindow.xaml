@@ -40,7 +40,6 @@
                     Command="{Binding LoadDataCommand}"
                     Style="{StaticResource MaterialDesignFloatingActionMiniButton}"
                     ToolTip="Загрузить лог-файл CSV">
-
                     <StackPanel Orientation="Horizontal">
                         <materialDesign:PackIcon
                             Width="24"
@@ -133,10 +132,9 @@
                         Cursor="Hand"
                         IsChecked="{Binding ShowEarlyDepartures}" />
                 </StackPanel>
-
-                <!--  По желанию можно настроить внешний вид элементов (ItemTemplate)  -->
             </WrapPanel>
         </Border>
+
         <DataGrid
             x:Name="LogsDataGrid"
             Grid.Row="1"
@@ -177,7 +175,6 @@
                         </Style>
                     </DataGridTextColumn.CellStyle>
                     <DataGridTextColumn.ElementStyle>
-                        <!--  Оставляем выравнивание текста по центру  -->
                         <Style TargetType="TextBlock">
                             <Setter Property="Padding" Value="5,2" />
                             <Setter Property="VerticalAlignment" Value="Center" />
