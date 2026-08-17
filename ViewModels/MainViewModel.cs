@@ -5,10 +5,14 @@ using LogGate.Interfaces;
 using LogGate.Models;
 using LogGate.Services;
 using LogGate.ViewModels;
+using LogGate.Views;
 using System.Collections.ObjectModel;
+using System.Text;
+using System.Windows;
 
 public partial class MainViewModel : ObservableObject
 {
+    private readonly AutoImportService _autoImportService;
     private readonly IDataRepository _dataRepository;
     private readonly IDialogService _dialogService;
     private readonly IFileParser _fileParser;
@@ -75,6 +79,10 @@ public partial class MainViewModel : ObservableObject
         _fileParser = fileParser;
         _dialogService = dialogService;
 
+        _autoImportService = new AutoImportService(_fileParser, _dataRepository);
+        _autoImportService.DataImported += OnAutoDataImported;
+        _autoImportService.ImportError += OnAutoImportError;
+
         _ = InitializeCalendarAsync();
 
         LoadDataFromDatabase();
@@ -92,6 +100,8 @@ public partial class MainViewModel : ObservableObject
 
     public void Cleanup()
     {
+        _autoImportService?.Dispose(); // Выключаем наблюдателя
+
         if (_dataRepository is IDisposable disposableRepo)
             disposableRepo.Dispose();
     }
@@ -164,6 +174,102 @@ public partial class MainViewModel : ObservableObject
         };
     }
 
+    [RelayCommand]
+    private async Task GenerateAiReportAsync()
+    {
+        // 1. Берем данные с учетом фильтров интерфейса из базы
+        var query = _dataRepository.GetAllItems();
+
+        if (!string.IsNullOrWhiteSpace(SearchText))
+        {
+            var lowerText = SearchText.ToLower();
+            query = query.Where(x =>
+                (x.FullName != null && x.FullName.ToLower().Contains(lowerText)) ||
+                (x.PassNumber != null && x.PassNumber.ToLower().Contains(lowerText)) ||
+                (x.Department != null && x.Department.ToLower().Contains(lowerText))
+            );
+        }
+        if (StartDate.HasValue) query = query.Where(x => x.EventTime >= StartDate.Value);
+        if (EndDate.HasValue) query = query.Where(x => x.EventTime <= EndDate.Value.AddDays(1).AddTicks(-1));
+
+        var fullData = query.ToList();
+
+        if (fullData.Count == 0)
+        {
+            MessageBox.Show("Нет данных для анализа за этот период.", "Внимание", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        // 2. АГРЕГАЦИЯ: Отбираем только нарушителей и сразу подсчитываем их нарушения
+        var violatorsSummary = fullData
+            .Where(x => ScheduleRules.IsLate(x) || ScheduleRules.IsEarlyDeparture(x))
+            .GroupBy(x => new { x.Department, x.FullName })
+            .Select(g => new
+            {
+                Department = g.Key.Department,
+                Name = g.Key.FullName,
+                LateCount = g.Count(x => ScheduleRules.IsLate(x)),
+                EarlyCount = g.Count(x => ScheduleRules.IsEarlyDeparture(x))
+            })
+            .ToList();
+
+        if (violatorsSummary.Count == 0)
+        {
+            MessageBox.Show("За выбранный период нарушений не найдено. Все сотрудники соблюдали график!", "Внимание", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        // 3. Формируем супер-сжатую таблицу для ИИ
+        var sb = new StringBuilder();
+        sb.AppendLine("Отдел | ФИО | Количество опозданий | Количество ранних уходов");
+
+        foreach (var v in violatorsSummary)
+            sb.AppendLine($"{v.Department} | {v.Name} | {v.LateCount} | {v.EarlyCount}");
+
+        // 4. Открываем окно отчета и привязываем отмену к его закрытию
+        var reportWindow = new ReportWindow();
+        if (Application.Current.MainWindow != null)
+            reportWindow.Owner = Application.Current.MainWindow;
+
+        var cts = new CancellationTokenSource();
+
+        // Выносим логику закрытия в отдельную переменную, чтобы потом можно было от нее отписаться
+        EventHandler onWindowClosed = (s, e) =>
+        {
+            try { cts.Cancel(); } catch { } // Дополнительная страховка
+        };
+
+        reportWindow.Closed += onWindowClosed;
+        reportWindow.Show();
+
+        try
+        {
+            var aiService = new AiAnalyzerService();
+            // Передаем токен в сервис
+            string report = await aiService.AnalyzeDataAsync(sb.ToString(), cts.Token);
+
+            if (!cts.IsCancellationRequested)
+            {
+                reportWindow.DisplayReport(report);
+            }
+        }
+        catch (Exception ex)
+        {
+            // Не показываем ошибку, если это мы сами отменили запрос закрытием окна
+            if (!cts.IsCancellationRequested)
+            {
+                reportWindow.Close();
+                MessageBox.Show($"Ошибка при обращении к ИИ:\n{ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        finally
+        {
+            // САМОЕ ВАЖНОЕ: Отвязываем событие ПЕРЕД тем, как удалить токен!
+            reportWindow.Closed -= onWindowClosed;
+            cts.Dispose(); // Очищаем память
+        }
+    }
+
     private async Task InitializeCalendarAsync()
     {
         int currentYear = DateTime.Now.Year;
@@ -206,6 +312,27 @@ public partial class MainViewModel : ObservableObject
             CurrentPage++;
             ApplyFilters(resetPage: false);
         }
+    }
+
+    private void OnAutoDataImported(int addedCount)
+    {
+        // Перекидываем выполнение в главный поток UI
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            LoadDataFromDatabase(); // Обновляем таблицу на экране
+
+            // Можно показать тихое уведомление в статус-баре,
+            // но пока выведем обычное окно для наглядности
+            _dialogService.ShowMessage($"Фоновый импорт завершен.\nДобавлено новых записей: {addedCount}");
+        });
+    }
+
+    private void OnAutoImportError(string error)
+    {
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            _dialogService.ShowMessage(error);
+        });
     }
 
     partial void OnEndDateChanged(DateTime? value) => ApplyFilters();

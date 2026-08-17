@@ -132,6 +132,27 @@
                         Cursor="Hand"
                         IsChecked="{Binding ShowEarlyDepartures}" />
                 </StackPanel>
+                <!--  Кнопка вызова ИИ  -->
+                <Button
+                    Height="50"
+                    Margin="0,0,15,0"
+                    VerticalAlignment="Center"
+                    BorderBrush="#FF6200EE"
+                    Command="{Binding GenerateAiReportCommand}"
+                    Foreground="#FF6200EE"
+                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                    ToolTip="Сгенерировать отчет с помощью нейросети">
+                    <StackPanel Orientation="Horizontal">
+                        <!--  Если у вас подключен MaterialDesignIcons, иконка Brain отлично подойдет  -->
+                        <materialDesign:PackIcon
+                            Width="20"
+                            Height="20"
+                            Margin="0,0,6,0"
+                            VerticalAlignment="Center"
+                            Kind="Brain" />
+                        <TextBlock VerticalAlignment="Center" Text="Анализ ИИ" />
+                    </StackPanel>
+                </Button>
             </WrapPanel>
         </Border>
 

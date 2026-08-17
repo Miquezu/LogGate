@@ -1,0 +1,21 @@
+﻿<Window x:Class="LogGate.Views.ReportWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:LogGate.Views"
+        mc:Ignorable="d"
+        xmlns:markdig="clr-namespace:Markdig.Wpf;assembly=Markdig.Wpf"
+        Title="Аналитический отчет ИИ" Height="500" Width="600"
+        WindowStartupLocation="CenterOwner">
+    <Grid Margin="10">
+        <!-- Панель загрузки (крутится, пока ждем ответ) -->
+        <StackPanel x:Name="LoadingPanel" VerticalAlignment="Center" HorizontalAlignment="Center">
+            <TextBlock Text="Анализ данных турникета..." FontSize="16" Margin="0,0,0,15" HorizontalAlignment="Center" />
+            <ProgressBar IsIndeterminate="True" Width="250" Height="20" />
+        </StackPanel>
+
+        <!-- Просмотрщик Markdown (скрыт по умолчанию) -->
+        <markdig:MarkdownViewer x:Name="MarkdownViewer" Visibility="Collapsed" Margin="5" />
+    </Grid>
+</Window>
