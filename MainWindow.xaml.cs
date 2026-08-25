@@ -13,11 +13,12 @@ namespace LogGate
     /// </summary>
     public partial class MainWindow : Window
     {
-        public MainWindow()
+        public MainWindow(MainViewModel viewModel)
         {
             InitializeComponent();
 
-            DataContext = new MainViewModel(new CsvFileParser(), new DataRepository(), new OpenDialog());
+            // Принимаем готовую ViewModel из DI-контейнера
+            DataContext = viewModel;
             this.Loaded += MainWindow_Loaded;
         }
 

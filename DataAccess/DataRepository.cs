@@ -8,25 +8,27 @@ namespace LogGate.DataAccess
     {
         private readonly AppDBContext _context;
 
-        public DataRepository()
+        // Контейнер сам передаст сюда настроенный AppDBContext
+        public DataRepository(AppDBContext context)
         {
-            _context = new AppDBContext();
+            _context = context;
         }
 
-        public void Dispose() =>
-            _context?.Dispose();
+        public void Dispose() => _context?.Dispose();
 
-        public IQueryable<DataItem> GetAllItems() =>
-            _context.DataItems.AsNoTracking();
+        public IQueryable<DataItem> GetAllItems() => _context.DataItems;
 
-        public List<WorkScheduleRule> GetAllWorkRules() =>
-            _context.WorkScheduleRules.ToList();
+        public IQueryable<WorkScheduleRule> GetAllSchedules() => _context.WorkScheduleRules;
+
+        public List<WorkScheduleRule> GetAllWorkRules() => _context.WorkScheduleRules.ToList();
 
         public List<DateTime> GetShortenedDaysByYear(int year) =>
              _context.ShortenedWorkDays
                 .Where(x => x.Date.Year == year)
                 .Select(x => x.Date)
                 .ToList();
+
+        public void SaveChanges() => _context.SaveChanges();
 
         public int SaveItems(IEnumerable<DataItem> items)
         {
@@ -58,29 +60,22 @@ namespace LogGate.DataAccess
 
         public void SaveWorkRules(IEnumerable<WorkScheduleRule> rules)
         {
-            // 1. Находим все текущие правила, удаляем их и СРАЗУ фиксируем удаление в БД
             var existingRules = _context.WorkScheduleRules.ToList();
             if (existingRules.Any())
-            {
                 _context.WorkScheduleRules.RemoveRange(existingRules);
-                _context.SaveChanges();
-            }
 
-            // 2. Создаем абсолютно новые, "чистые" копии объектов без привязки к старым Id
             var cleanRules = rules.Select(r => new WorkScheduleRule
             {
                 TargetName = r.TargetName,
                 IsPersonal = r.IsPersonal,
                 StartTime = r.StartTime,
-                EndTime = r.EndTime
+                EndTime = r.EndTime,
+                RequiresAlcotest = r.RequiresAlcotest
             }).ToList();
 
-            // 3. Записываем чистые копии и сохраняем
             if (cleanRules.Any())
-            {
                 _context.WorkScheduleRules.AddRange(cleanRules);
-                _context.SaveChanges();
-            }
+            _context.SaveChanges();
         }
     }
 }

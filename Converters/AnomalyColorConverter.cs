@@ -18,15 +18,8 @@ namespace LogGate.Converters
                 switch (param)
                 {
                     case "Temp":
-                        if (item.Temperature != null)
-                        {
-                            string? tempStr = item.Temperature?.ToString()?.Replace(',', '.');
-                            if (double.TryParse(tempStr, NumberStyles.Any, CultureInfo.InvariantCulture, out double temp))
-                            {
-                                if (temp > 37.0)
-                                    return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFE0B2")); // Оранжевый
-                            }
-                        }
+                        if (item.Temperature.HasValue && item.Temperature.Value > 37.0)
+                            return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFE0B2"));
                         break;
 
                     case "Alco":

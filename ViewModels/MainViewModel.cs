@@ -56,6 +56,9 @@ public partial class MainViewModel : ObservableObject
     private bool _showLateArrivals;
 
     [ObservableProperty]
+    private bool _showMissingAlcotest;
+
+    [ObservableProperty]
     private string _sortColumn = "EventTime";
 
     [ObservableProperty]
@@ -82,6 +85,7 @@ public partial class MainViewModel : ObservableObject
         _autoImportService = new AutoImportService(_fileParser, _dataRepository);
         _autoImportService.DataImported += OnAutoDataImported;
         _autoImportService.ImportError += OnAutoImportError;
+        _autoImportService.ImportStarted += OnAutoImportStarted; // Новая подписка
 
         _ = InitializeCalendarAsync();
 
@@ -90,17 +94,17 @@ public partial class MainViewModel : ObservableObject
 
     public List<string> DatePresets { get; } =
     [
-            "Сегодня",
-            "Вчера",
-            "За 7 дней",
-            "Этот месяц",
-            "Прошлый месяц",
-            "Сначала года"
+        "Сегодня",
+        "Вчера",
+        "За 7 дней",
+        "Этот месяц",
+        "Прошлый месяц",
+        "Сначала года"
     ];
 
     public void Cleanup()
     {
-        _autoImportService?.Dispose(); // Выключаем наблюдателя
+        _autoImportService?.Dispose();
 
         if (_dataRepository is IDisposable disposableRepo)
             disposableRepo.Dispose();
@@ -120,38 +124,34 @@ public partial class MainViewModel : ObservableObject
             );
         }
 
-        if (StartDate.HasValue)
-            query = query.Where(x => x.EventTime >= StartDate.Value);
+        if (StartDate.HasValue) query = query.Where(x => x.EventTime >= StartDate.Value);
+        if (EndDate.HasValue) query = query.Where(x => x.EventTime <= EndDate.Value.AddDays(1).AddTicks(-1));
 
-        if (EndDate.HasValue)
-            query = query.Where(x => x.EventTime <= EndDate.Value.AddDays(1).AddTicks(-1));
+        var memoryData = query.AsEnumerable();
 
         if (ShowLateArrivals)
-            query = query.Where(ScheduleRules.IsLateExpression());
+            memoryData = memoryData.Where(x => ScheduleRules.IsLate(x));
 
         if (ShowEarlyDepartures)
-            query = query.Where(ScheduleRules.IsEarlyDepartureExpression());
+            memoryData = memoryData.Where(x => ScheduleRules.IsEarlyDeparture(x));
 
-        FilteredCount = query.Count();
+        if (ShowMissingAlcotest)
+            memoryData = memoryData.Where(item => ScheduleRules.RequiresAlcotest(item) && item.AlcotestResult == null);
+
+        var finalDataList = memoryData.ToList();
+
+        FilteredCount = finalDataList.Count;
         TotalPages = (int)Math.Ceiling((double)FilteredCount / PageSize);
-        if (TotalPages == 0)
-            TotalPages = 1;
+        if (TotalPages == 0) TotalPages = 1;
+        if (resetPage) CurrentPage = 1;
 
-        if (resetPage)
-            CurrentPage = 1;
+        var sortedData = ApplySorting(finalDataList);
+        var pagedData = sortedData.Skip((CurrentPage - 1) * PageSize).Take(PageSize);
 
-        // 1. Применяем динамическую сортировку перед пагинацией
-        query = ApplySorting(query);
-
-        // 2. Берем нужную страницу (жесткий OrderByDescending убрали)
-        var pagedQuery = query
-                      .Skip((CurrentPage - 1) * PageSize)
-                      .Take(PageSize);
-
-        DataItems = new ObservableCollection<DataItem>(pagedQuery);
+        DataItems = new ObservableCollection<DataItem>(pagedData);
     }
 
-    private IQueryable<DataItem> ApplySorting(IQueryable<DataItem> query)
+    private IEnumerable<DataItem> ApplySorting(IEnumerable<DataItem> query)
     {
         return SortColumn switch
         {
@@ -168,8 +168,6 @@ public partial class MainViewModel : ObservableObject
             "Department" => SortDescending ? query.OrderByDescending(x => x.Department) : query.OrderBy(x => x.Department),
             "EmployeeNumber" => SortDescending ? query.OrderByDescending(x => x.EmployeeNumber) : query.OrderBy(x => x.EmployeeNumber),
             "PassNumber" => SortDescending ? query.OrderByDescending(x => x.PassNumber) : query.OrderBy(x => x.PassNumber),
-
-            // По умолчанию (если колонка не найдена) сортируем по времени события от новых к старым
             _ => query.OrderByDescending(x => x.EventTime)
         };
     }
@@ -177,7 +175,6 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task GenerateAiReportAsync()
     {
-        // 1. Берем данные с учетом фильтров интерфейса из базы
         var query = _dataRepository.GetAllItems();
 
         if (!string.IsNullOrWhiteSpace(SearchText))
@@ -200,43 +197,75 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        // 2. АГРЕГАЦИЯ: Отбираем только нарушителей и сразу подсчитываем их нарушения
-        var violatorsSummary = fullData
-            .Where(x => ScheduleRules.IsLate(x) || ScheduleRules.IsEarlyDeparture(x))
-            .GroupBy(x => new { x.Department, x.FullName })
-            .Select(g => new
-            {
-                Department = g.Key.Department,
-                Name = g.Key.FullName,
-                LateCount = g.Count(x => ScheduleRules.IsLate(x)),
-                EarlyCount = g.Count(x => ScheduleRules.IsEarlyDeparture(x))
-            })
-            .ToList();
+        int totalRecords = fullData.Count;
+        int totalEmployees = fullData.Where(x => x.FullName != null).Select(x => x.FullName).Distinct().Count();
 
-        if (violatorsSummary.Count == 0)
+        var violators = fullData.Where(item =>
+            (item.Temperature > 37.2) ||
+            (item.AlcotestResult > 0) ||
+            (ScheduleRules.RequiresAlcotest(item) && item.AlcotestResult == null) ||
+            ScheduleRules.IsLate(item) ||
+            ScheduleRules.IsEarlyDeparture(item)
+        ).ToList();
+
+        if (violators.Count == 0)
         {
-            MessageBox.Show("За выбранный период нарушений не найдено. Все сотрудники соблюдали график!", "Внимание", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show("За выбранный период нарушений не найдено. Все сотрудники соблюдали правила!", "Внимание", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
-        // 3. Формируем супер-сжатую таблицу для ИИ
+        var shedule = _dataRepository.GetAllWorkRules().ToList();
+
         var sb = new StringBuilder();
-        sb.AppendLine("Отдел | ФИО | Количество опозданий | Количество ранних уходов");
 
-        foreach (var v in violatorsSummary)
-            sb.AppendLine($"{v.Department} | {v.Name} | {v.LateCount} | {v.EarlyCount}");
+        sb.AppendLine("=== ВНУТРЕННИЕ РЕГЛАМЕНТЫ ПРЕДПРИЯТИЯ ===");
 
-        // 4. Открываем окно отчета и привязываем отмену к его закрытию
+        var alcoRequiredTargets = _dataRepository.GetAllWorkRules()
+            .Where(r => r.RequiresAlcotest)
+            .Select(r => r.TargetName)
+            .ToList();
+
+        sb.AppendLine("Отделы и сотрудники, обязанные проходить алкотест:");
+        if (alcoRequiredTargets.Count != 0)
+            sb.AppendLine(string.Join(", ", alcoRequiredTargets));
+        else
+            sb.AppendLine("- Обязательное прохождение не назначено.");
+        sb.AppendLine();
+
+        sb.AppendLine("Установленные графики работы:");
+        var workRules = _dataRepository.GetAllWorkRules();
+        if (workRules.Count != 0)
+        {
+            foreach (var rule in workRules)
+            {
+                string targetType = rule.IsPersonal ? "(Индивидуальный)" : "(Отдел)";
+                sb.AppendLine($"- {rule.TargetName} {targetType}: с {rule.StartTime:hh\\:mm} до {rule.EndTime:hh\\:mm}");
+            }
+        }
+        else
+            sb.AppendLine("- Используется стандартный график по умолчанию.");
+        sb.AppendLine();
+
+        sb.AppendLine("=== СТАТИСТИКА ЗА ПЕРИОД ===");
+        sb.AppendLine($"Всего зафиксировано проходов: {totalRecords}");
+        sb.AppendLine($"Всего уникальных сотрудников прошло: {totalEmployees}");
+        sb.AppendLine($"Выявлено нарушений/инцидентов: {violators.Count}");
+        sb.AppendLine();
+
+        sb.AppendLine("=== ДЕТАЛИЗАЦИЯ ИНЦИДЕНТОВ (Только нарушения) ===");
+
+        foreach (var item in violators)
+            sb.AppendLine($"{item.EventTime:dd.MM HH:mm} {item.Direction} | {item.FullName} ({item.Position}, {item.Department}) | Т:{item.Temperature} | Алко:{item.AlcotestResult} | Прим: {item.Note}");
+
         var reportWindow = new ReportWindow();
         if (Application.Current.MainWindow != null)
             reportWindow.Owner = Application.Current.MainWindow;
 
         var cts = new CancellationTokenSource();
 
-        // Выносим логику закрытия в отдельную переменную, чтобы потом можно было от нее отписаться
         EventHandler onWindowClosed = (s, e) =>
         {
-            try { cts.Cancel(); } catch { } // Дополнительная страховка
+            try { cts.Cancel(); } catch { }
         };
 
         reportWindow.Closed += onWindowClosed;
@@ -245,17 +274,13 @@ public partial class MainViewModel : ObservableObject
         try
         {
             var aiService = new AiAnalyzerService();
-            // Передаем токен в сервис
             string report = await aiService.AnalyzeDataAsync(sb.ToString(), cts.Token);
 
             if (!cts.IsCancellationRequested)
-            {
                 reportWindow.DisplayReport(report);
-            }
         }
         catch (Exception ex)
         {
-            // Не показываем ошибку, если это мы сами отменили запрос закрытием окна
             if (!cts.IsCancellationRequested)
             {
                 reportWindow.Close();
@@ -264,7 +289,6 @@ public partial class MainViewModel : ObservableObject
         }
         finally
         {
-            // САМОЕ ВАЖНОЕ: Отвязываем событие ПЕРЕД тем, как удалить токен!
             reportWindow.Closed -= onWindowClosed;
             cts.Dispose(); // Очищаем память
         }
@@ -316,13 +340,10 @@ public partial class MainViewModel : ObservableObject
 
     private void OnAutoDataImported(int addedCount)
     {
-        // Перекидываем выполнение в главный поток UI
         Application.Current.Dispatcher.Invoke(() =>
         {
-            LoadDataFromDatabase(); // Обновляем таблицу на экране
-
-            // Можно показать тихое уведомление в статус-баре,
-            // но пока выведем обычное окно для наглядности
+            LoadDataFromDatabase();
+            StatusMessage = $"Готово (фоновый импорт: +{addedCount} записей)";
             _dialogService.ShowMessage($"Фоновый импорт завершен.\nДобавлено новых записей: {addedCount}");
         });
     }
@@ -331,7 +352,16 @@ public partial class MainViewModel : ObservableObject
     {
         Application.Current.Dispatcher.Invoke(() =>
         {
+            StatusMessage = "Ошибка фонового импорта!";
             _dialogService.ShowMessage(error);
+        });
+    }
+
+    private void OnAutoImportStarted(string fileName)
+    {
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            StatusMessage = $"Загрузка файла из папки: {fileName}...";
         });
     }
 
@@ -399,6 +429,8 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnShowLateArrivalsChanged(bool value) => ApplyFilters();
 
+    partial void OnShowMissingAlcotestChanged(bool value) => ApplyFilters();
+
     partial void OnSortColumnChanged(string value) => ApplyFilters();
 
     partial void OnSortDescendingChanged(bool value) => ApplyFilters();
@@ -449,5 +481,19 @@ public partial class MainViewModel : ObservableObject
         ShowEarlyDepartures = false;
 
         LoadDataFromDatabase();
+    }
+
+    [RelayCommand]
+    private void SaveChanges()
+    {
+        try
+        {
+            _dataRepository.SaveChanges();
+            StatusMessage = "Изменения успешно сохранены в базу.";
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Ошибка сохранения:\n{ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 }

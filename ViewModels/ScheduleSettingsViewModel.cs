@@ -80,7 +80,6 @@ namespace LogGate.ViewModels
                 var rulesList = Rules.ToList();
                 _dataRepository.SaveWorkRules(rulesList);
 
-                // Мгновенно обновляем правила в движке, не перезапуская приложение
                 ScheduleRules.UpdateRules(rulesList, ScheduleRules.PreHolidays);
 
                 _dialogService.ShowMessage("Настройки графиков успешно сохранены!");

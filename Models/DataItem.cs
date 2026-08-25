@@ -10,6 +10,7 @@
         public DateTime? EventTime { get; set; }
         public string? FullName { get; set; }
         public int Id { get; set; }
+        public string? Note { get; set; }
         public string? PassNumber { get; set; }
         public string? Position { get; set; }
         public string? Post { get; set; }

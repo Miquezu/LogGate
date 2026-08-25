@@ -32,128 +32,133 @@
             Background="{DynamicResource MaterialDesignPaper}"
             CornerRadius="8">
 
-            <WrapPanel VerticalAlignment="Center">
-                <Button
-                    Width="50"
-                    Height="50"
-                    Margin="0,0,10,0"
-                    Command="{Binding LoadDataCommand}"
-                    Style="{StaticResource MaterialDesignFloatingActionMiniButton}"
-                    ToolTip="Загрузить лог-файл CSV">
-                    <StackPanel Orientation="Horizontal">
-                        <materialDesign:PackIcon
-                            Width="24"
-                            Height="24"
-                            VerticalAlignment="Center"
-                            Kind="FolderUpload" />
-                    </StackPanel>
-                </Button>
-                <TextBox
-                    Width="250"
-                    Height="50"
-                    Margin="0,0,15,0"
-                    VerticalAlignment="Center"
-                    materialDesign:HintAssist.Hint="Поиск по ФИО, пропуску..."
-                    materialDesign:TextFieldAssist.HasClearButton="True"
-                    materialDesign:TextFieldAssist.LeadingIcon="Magnify"
-                    Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                    Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
-                <ComboBox
-                    Width="150"
-                    Height="50"
-                    Margin="0,0,10,0"
-                    materialDesign:HintAssist.Hint="Выбор периода"
-                    ItemsSource="{Binding DatePresets}"
-                    SelectedItem="{Binding SelectedDatePreset}"
-                    Style="{StaticResource MaterialDesignOutlinedComboBox}" />
-                <DatePicker
-                    Width="140"
-                    Height="50"
-                    Margin="0,0,10,0"
-                    VerticalAlignment="Center"
-                    materialDesign:HintAssist.Hint="С даты"
-                    SelectedDate="{Binding StartDate}"
-                    Style="{StaticResource MaterialDesignOutlinedDatePicker}" />
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="12" />
+                    <!--  Отступ между уровнями  -->
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
 
-                <!--  Фильтр по дате "По"  -->
-                <DatePicker
-                    Width="140"
-                    Height="50"
-                    Margin="0,0,15,0"
-                    VerticalAlignment="Center"
-                    materialDesign:HintAssist.Hint="По дату"
-                    SelectedDate="{Binding EndDate}"
-                    Style="{StaticResource MaterialDesignOutlinedDatePicker}" />
+                <!--  1 УРОВЕНЬ: Поиск и Глобальные функции  -->
+                <Grid Grid.Row="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
 
-                <!--  Кнопка сброса фильтров  -->
-                <Button
-                    Height="50"
-                    Margin="0,0,15,0"
-                    VerticalAlignment="Center"
-                    Command="{Binding ResetFiltersCommand}"
-                    Style="{StaticResource MaterialDesignOutlinedButton}"
-                    ToolTip="Сбросить все фильтры">
-                    <StackPanel Orientation="Horizontal">
-                        <materialDesign:PackIcon
-                            Width="20"
-                            Height="20"
-                            Margin="0,0,6,0"
-                            VerticalAlignment="Center"
-                            Kind="FilterRemove" />
-                        <TextBlock VerticalAlignment="Center" Text="Сброс" />
-                    </StackPanel>
-                </Button>
-                <Button
-                    Height="50"
-                    Margin="0,0,15,0"
-                    VerticalAlignment="Center"
-                    Command="{Binding OpenScheduleSettingsCommand}"
-                    Style="{StaticResource MaterialDesignOutlinedButton}"
-                    ToolTip="Настроить индивидуальные графики и смены">
-                    <StackPanel Orientation="Horizontal">
-                        <materialDesign:PackIcon
-                            Width="20"
-                            Height="20"
-                            Margin="0,0,6,0"
-                            VerticalAlignment="Center"
-                            Kind="Cog" />
-                        <TextBlock VerticalAlignment="Center" Text="Графики" />
-                    </StackPanel>
-                </Button>
-                <StackPanel>
-                    <CheckBox
+                    <TextBox
+                        Grid.Column="0"
+                        MaxWidth="400"
+                        HorizontalAlignment="Left"
                         VerticalAlignment="Center"
+                        materialDesign:HintAssist.Hint="Поиск по ФИО, пропуску..."
+                        materialDesign:TextFieldAssist.HasClearButton="True"
+                        materialDesign:TextFieldAssist.LeadingIcon="Magnify"
+                        Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                        Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <StackPanel
+                        Grid.Column="1"
+                        VerticalAlignment="Center"
+                        Orientation="Horizontal">
+                        <Button
+                            Margin="0,0,10,0"
+                            Command="{Binding GenerateAiReportCommand}"
+                            Style="{StaticResource MaterialDesignOutlinedButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon
+                                    Margin="0,0,6,0"
+                                    VerticalAlignment="Center"
+                                    Kind="Brain" />
+                                <TextBlock VerticalAlignment="Center" Text="Анализ ИИ" />
+                            </StackPanel>
+                        </Button>
+
+                        <Button
+                            Margin="0,0,10,0"
+                            Command="{Binding OpenScheduleSettingsCommand}"
+                            Style="{StaticResource MaterialDesignOutlinedButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon
+                                    Margin="0,0,6,0"
+                                    VerticalAlignment="Center"
+                                    Kind="ChartBox" />
+                                <TextBlock VerticalAlignment="Center" Text="Расписание" />
+                            </StackPanel>
+                        </Button>
+
+                        <Button Command="{Binding LoadDataCommand}" Style="{StaticResource MaterialDesignRaisedButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon
+                                    Margin="0,0,6,0"
+                                    VerticalAlignment="Center"
+                                    Kind="FileUpload" />
+                                <TextBlock VerticalAlignment="Center" Text="Загрузить CSV" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+
+                <!--  2 УРОВЕНЬ: Фильтры  -->
+                <StackPanel
+                    Grid.Row="2"
+                    VerticalAlignment="Center"
+                    Orientation="Horizontal">
+                    <ComboBox
+                        Width="140"
+                        Margin="0,0,15,0"
+                        materialDesign:HintAssist.Hint="Период"
+                        ItemsSource="{Binding DatePresets}"
+                        SelectedItem="{Binding SelectedDatePreset}"
+                        Style="{StaticResource MaterialDesignOutlinedComboBox}" />
+
+                    <DatePicker
+                        Width="130"
+                        Margin="0,0,10,0"
+                        materialDesign:HintAssist.Hint="С даты"
+                        SelectedDate="{Binding StartDate}"
+                        Style="{StaticResource MaterialDesignOutlinedDatePicker}" />
+
+                    <DatePicker
+                        Width="130"
+                        Margin="0,0,20,0"
+                        materialDesign:HintAssist.Hint="По дату"
+                        SelectedDate="{Binding EndDate}"
+                        Style="{StaticResource MaterialDesignOutlinedDatePicker}" />
+
+                    <CheckBox
+                        Margin="0,0,10,0"
                         Content="Опоздавшие"
-                        Cursor="Hand"
-                        IsChecked="{Binding ShowLateArrivals}" />
+                        IsChecked="{Binding ShowLateArrivals}"
+                        Style="{StaticResource MaterialDesignFilterChipOutlineCheckBox}"
+                        ToolTip="Показать только опоздавших сотрудников" />
+
                     <CheckBox
-                        VerticalAlignment="Center"
+                        Margin="0,0,10,0"
                         Content="Ушли рано"
-                        Cursor="Hand"
-                        IsChecked="{Binding ShowEarlyDepartures}" />
+                        IsChecked="{Binding ShowEarlyDepartures}"
+                        Style="{StaticResource MaterialDesignFilterChipOutlineCheckBox}"
+                        ToolTip="Показать тех, кто ушел раньше времени" />
+
+                    <CheckBox
+                        Margin="0,0,20,0"
+                        Content="Не пройден алкотест"
+                        IsChecked="{Binding ShowMissingAlcotest}"
+                        Style="{StaticResource MaterialDesignFilterChipOutlineCheckBox}"
+                        ToolTip="Показать тех, Кто не прошел алкотест" />
+
+                    <Button Command="{Binding ResetFiltersCommand}" Style="{StaticResource MaterialDesignFlatButton}">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon
+                                Margin="0,0,6,0"
+                                VerticalAlignment="Center"
+                                Kind="FilterRemove" />
+                            <TextBlock VerticalAlignment="Center" Text="Сброс" />
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
-                <!--  Кнопка вызова ИИ  -->
-                <Button
-                    Height="50"
-                    Margin="0,0,15,0"
-                    VerticalAlignment="Center"
-                    BorderBrush="#FF6200EE"
-                    Command="{Binding GenerateAiReportCommand}"
-                    Foreground="#FF6200EE"
-                    Style="{StaticResource MaterialDesignOutlinedButton}"
-                    ToolTip="Сгенерировать отчет с помощью нейросети">
-                    <StackPanel Orientation="Horizontal">
-                        <!--  Если у вас подключен MaterialDesignIcons, иконка Brain отлично подойдет  -->
-                        <materialDesign:PackIcon
-                            Width="20"
-                            Height="20"
-                            Margin="0,0,6,0"
-                            VerticalAlignment="Center"
-                            Kind="Brain" />
-                        <TextBlock VerticalAlignment="Center" Text="Анализ ИИ" />
-                    </StackPanel>
-                </Button>
-            </WrapPanel>
+            </Grid>
         </Border>
 
         <DataGrid
@@ -161,8 +166,10 @@
             Grid.Row="1"
             AlternatingRowBackground="#FFF0F0F0"
             AutoGenerateColumns="False"
+            CanUserAddRows="False"
+            CanUserDeleteRows="False"
             HeadersVisibility="All"
-            IsReadOnly="True"
+            IsReadOnly="False"
             ItemsSource="{Binding DataItems}"
             PreviewMouseDoubleClick="LogsDataGrid_PreviewMouseDoubleClick"
             RowHeight="33"
@@ -184,11 +191,13 @@
                     Width="SizeToCells"
                     Binding="{Binding EventTime, StringFormat=\{0:dd.MM.yy\}}"
                     Header="Дата"
+                    IsReadOnly="True"
                     SortMemberPath="EventTime" />
                 <DataGridTextColumn
                     Width="SizeToCells"
                     Binding="{Binding EventTime, StringFormat=\{0:HH:mm:ss\}}"
                     Header="Время"
+                    IsReadOnly="True"
                     SortMemberPath="EventTime">
                     <DataGridTextColumn.CellStyle>
                         <Style BasedOn="{StaticResource MaterialDesignDataGridCell}" TargetType="DataGridCell">
@@ -206,16 +215,19 @@
                     Width="SizeToCells"
                     Binding="{Binding Direction}"
                     Header="Вх./выход"
+                    IsReadOnly="True"
                     SortMemberPath="Direcrion" />
                 <DataGridTextColumn
                     Width="SizeToCells"
                     Binding="{Binding TemperatureTime, StringFormat=\{0:HH:mm:ss\}}"
                     Header="Время 🌡️"
+                    IsReadOnly="True"
                     SortMemberPath="TemperatureTime" />
                 <DataGridTextColumn
                     Width="SizeToCells"
                     Binding="{Binding Temperature}"
                     Header="🌡️ °C"
+                    IsReadOnly="True"
                     SortMemberPath="Temperature">
                     <DataGridTextColumn.CellStyle>
                         <Style BasedOn="{StaticResource MaterialDesignDataGridCell}" TargetType="DataGridCell">
@@ -227,11 +239,13 @@
                     Width="100"
                     Binding="{Binding AlcotestTime, StringFormat=\{0:dd.MM.yy HH:mm:ss\}}"
                     Header="Время алко."
+                    IsReadOnly="True"
                     SortMemberPath="AlcotestTime" />
                 <DataGridTextColumn
                     Width="SizeToCells"
                     Binding="{Binding AlcotestResult}"
                     Header="Результат алко."
+                    IsReadOnly="True"
                     SortMemberPath="AlcotestResult">
                     <DataGridTextColumn.CellStyle>
                         <Style BasedOn="{StaticResource MaterialDesignDataGridCell}" TargetType="DataGridCell">
@@ -243,27 +257,36 @@
                     Width="SizeToCells"
                     Binding="{Binding FullName}"
                     Header="ФИО"
+                    IsReadOnly="True"
                     SortMemberPath="FullName" />
                 <DataGridTextColumn
                     Width="200"
                     Binding="{Binding Position}"
                     Header="Должность"
+                    IsReadOnly="True"
                     SortMemberPath="Position" />
                 <DataGridTextColumn
                     Width="150"
                     Binding="{Binding Department}"
                     Header="Подразделение"
+                    IsReadOnly="True"
                     SortMemberPath="Departament" />
                 <DataGridTextColumn
                     Width="SizeToCells"
                     Binding="{Binding EmployeeNumber}"
                     Header="Таб. №"
+                    IsReadOnly="True"
                     SortMemberPath="EmployeeNumber" />
                 <DataGridTextColumn
                     Width="SizeToCells"
                     Binding="{Binding PassNumber}"
                     Header="Пропуск"
+                    IsReadOnly="True"
                     SortMemberPath="PassNumber" />
+                <DataGridTextColumn
+                    Width="Auto"
+                    Binding="{Binding Note, UpdateSourceTrigger=PropertyChanged}"
+                    Header="Примечание" />
             </DataGrid.Columns>
         </DataGrid>
         <StatusBar
@@ -277,6 +300,7 @@
                         <Grid.ColumnDefinitions>
                             <!--  Левая часть: Статус  -->
                             <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
                             <!--  Правая часть: Счетчики  -->
                             <ColumnDefinition Width="Auto" />
@@ -301,8 +325,13 @@
                         Text="{Binding StatusMessage}" />
                 </StackPanel>
             </StatusBarItem>
-
             <StatusBarItem Grid.Column="1" HorizontalAlignment="Center">
+                <Button
+                    Command="{Binding SaveChangesCommand}"
+                    Content="💾 Сохранить изменения"
+                    Style="{StaticResource MaterialDesignOutlinedButton}" />
+            </StatusBarItem>
+            <StatusBarItem Grid.Column="2" HorizontalAlignment="Center">
                 <StackPanel Orientation="Horizontal">
                     <!--  Кнопка Назад  -->
                     <Button
@@ -335,7 +364,7 @@
             </StatusBarItem>
 
             <!--  2. Информация о количестве записей  -->
-            <StatusBarItem Grid.Column="2">
+            <StatusBarItem Grid.Column="3">
                 <StackPanel Orientation="Horizontal">
                     <!--  Отображается, если применен фильтр  -->
                     <StackPanel Margin="0,0,15,0" Orientation="Horizontal">

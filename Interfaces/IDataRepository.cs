@@ -10,6 +10,8 @@ namespace LogGate.Interfaces
 
         List<DateTime> GetShortenedDaysByYear(int year);
 
+        void SaveChanges();
+
         int SaveItems(IEnumerable<DataItem> items);
 
         void SaveShortenedDays(IEnumerable<DateTime> dates);

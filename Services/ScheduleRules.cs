@@ -1,104 +1,58 @@
 ﻿using LogGate.Models;
-using System.Linq.Expressions;
 
 namespace LogGate.Services
 {
     public static class ScheduleRules
     {
-        private static Func<DataItem, bool>? _isEarlyDepartureFunc;
-        private static Func<DataItem, bool>? _isLateFunc;
-        public static Func<DataItem, bool> IsEarlyDeparture => _isEarlyDepartureFunc ??= IsEarlyDepartureExpression().Compile();
-
-        // Публичные свойства для использования в AnomalyColorConverter
-        public static Func<DataItem, bool> IsLate => _isLateFunc ??= IsLateExpression().Compile();
-
         public static List<DateTime> PreHolidays { get; private set; } = new();
         public static List<WorkScheduleRule> Rules { get; private set; } = new();
 
-        public static Expression<Func<DataItem, bool>> IsEarlyDepartureExpression()
+        public static bool IsEarlyDeparture(DataItem x)
         {
-            var predicate = PredicateBuilder.False<DataItem>();
-            if (Rules.Count == 0) return predicate;
+            if (Rules.Count == 0 || !x.EventTime.HasValue || x.Direction != "Выход") return false;
 
-            var personalExceptions = Rules.Where(r => r.IsPersonal).Select(r => r.TargetName).ToList();
+            var rule = Rules.FirstOrDefault(r => r.IsPersonal && r.TargetName == x.FullName) ??
+                       Rules.FirstOrDefault(r => !r.IsPersonal && r.TargetName == x.Department);
 
-            foreach (var rule in Rules)
-            {
-                int normalEnd = (int)rule.EndTime.TotalMinutes;
-                int shortEnd = normalEnd - 60; // Логика сокращенного предпраздничного дня
+            if (rule == null) return false;
 
-                if (rule.IsPersonal)
-                {
-                    predicate = predicate.Or(x =>
-                        x.EventTime.HasValue &&
-                        x.Direction == "Выход" &&
-                        x.FullName == rule.TargetName &&
-                        (
-                            (PreHolidays.Contains(x.EventTime.Value.Date) && (x.EventTime.Value.Hour * 60 + x.EventTime.Value.Minute < shortEnd)) ||
-                            (!PreHolidays.Contains(x.EventTime.Value.Date) && (x.EventTime.Value.Hour * 60 + x.EventTime.Value.Minute < normalEnd))
-                        ));
-                }
-                else
-                {
-                    predicate = predicate.Or(x =>
-                        x.EventTime.HasValue &&
-                        x.Direction == "Выход" &&
-                        x.Department == rule.TargetName &&
-                        !personalExceptions.Contains(x.FullName) &&
-                        (
-                            (PreHolidays.Contains(x.EventTime.Value.Date) && (x.EventTime.Value.Hour * 60 + x.EventTime.Value.Minute < shortEnd)) ||
-                            (!PreHolidays.Contains(x.EventTime.Value.Date) && (x.EventTime.Value.Hour * 60 + x.EventTime.Value.Minute < normalEnd))
-                        ));
-                }
-            }
+            int normalEnd = (int)rule.EndTime.TotalMinutes;
+            int shortEnd = normalEnd - 60;
+            int eventMinutes = x.EventTime.Value.Hour * 60 + x.EventTime.Value.Minute;
 
-            return predicate;
+            bool isShortDay = PreHolidays.Contains(x.EventTime.Value.Date);
+            int limit = isShortDay ? shortEnd : normalEnd;
+
+            return eventMinutes < limit;
         }
 
-        public static Expression<Func<DataItem, bool>> IsLateExpression()
+        public static bool IsLate(DataItem x)
         {
-            var predicate = PredicateBuilder.False<DataItem>();
-            if (Rules.Count == 0) return predicate; // Если правил нет, никто не опаздывает
+            if (Rules.Count == 0 || !x.EventTime.HasValue || x.Direction != "Вход") return false;
 
-            // Получаем список всех сотрудников с персональными графиками
-            var personalExceptions = Rules.Where(r => r.IsPersonal).Select(r => r.TargetName).ToList();
+            var rule = Rules.FirstOrDefault(r => r.IsPersonal && r.TargetName == x.FullName) ??
+                       Rules.FirstOrDefault(r => !r.IsPersonal && r.TargetName == x.Department);
 
-            foreach (var rule in Rules)
-            {
-                int startMinutes = (int)rule.StartTime.TotalMinutes;
+            if (rule == null) return false;
 
-                if (rule.IsPersonal)
-                {
-                    predicate = predicate.Or(x =>
-                        x.EventTime.HasValue &&
-                        x.Direction == "Вход" &&
-                        x.FullName == rule.TargetName &&
-                        (x.EventTime.Value.Hour * 60 + x.EventTime.Value.Minute > startMinutes + 1));
-                }
-                else
-                {
-                    // Для отделов исключаем тех сотрудников, у которых есть персональный график
-                    predicate = predicate.Or(x =>
-                        x.EventTime.HasValue &&
-                        x.Direction == "Вход" &&
-                        x.Department == rule.TargetName &&
-                        !personalExceptions.Contains(x.FullName) &&
-                        (x.EventTime.Value.Hour * 60 + x.EventTime.Value.Minute > startMinutes + 1));
-                }
-            }
+            int startMinutes = (int)rule.StartTime.TotalMinutes;
+            int eventMinutes = x.EventTime.Value.Hour * 60 + x.EventTime.Value.Minute;
 
-            return predicate;
+            return eventMinutes > startMinutes + 1;
         }
 
-        // Метод для инициализации правил при старте приложения
+        public static bool RequiresAlcotest(DataItem item)
+        {
+            var rule = Rules.FirstOrDefault(r => r.IsPersonal && r.TargetName == item.FullName) ??
+                       Rules.FirstOrDefault(r => !r.IsPersonal && r.TargetName == item.Department);
+
+            return rule?.RequiresAlcotest ?? false;
+        }
+
         public static void UpdateRules(List<WorkScheduleRule> rules, List<DateTime> holidays)
         {
             Rules = rules;
             PreHolidays = holidays;
-
-            // Перекомпилируем функции для UI (DataGrid) при обновлении базы
-            _isLateFunc = IsLateExpression().Compile();
-            _isEarlyDepartureFunc = IsEarlyDepartureExpression().Compile();
         }
     }
 }

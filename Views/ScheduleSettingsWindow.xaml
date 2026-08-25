@@ -112,6 +112,10 @@
                     Width="SizeToHeader"
                     Binding="{Binding EndTime, StringFormat=\{0:hh\\:mm\}}"
                     Header="Время ухода" />
+                <DataGridCheckBoxColumn
+                    Width="SizeToHeader"
+                    Binding="{Binding RequiresAlcotest, UpdateSourceTrigger=PropertyChanged}"
+                    Header="Требуется алкотест" />
             </DataGrid.Columns>
             <DataGrid.ContextMenu>
                 <ContextMenu>

@@ -3,6 +3,7 @@ using System;
 using LogGate.DataAccess;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LogGate.Migrations
 {
     [DbContext(typeof(AppDBContext))]
-    partial class AppDBContextModelSnapshot : ModelSnapshot
+    [Migration("20260824061952_AddNoteColumn")]
+    partial class AddNoteColumn
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.10");
@@ -94,9 +97,6 @@ namespace LogGate.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("IsPersonal")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("RequiresAlcotest")
                         .HasColumnType("INTEGER");
 
                     b.Property<TimeSpan>("StartTime")
