@@ -364,3 +364,4 @@ FodyWeavers.xsd
 /app_data.db
 /CodeParser.ps1
 /MergedProjectCode.txt
+/appsettings.json
