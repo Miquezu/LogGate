@@ -22,18 +22,6 @@ namespace LogGate
             this.Loaded += MainWindow_Loaded;
         }
 
-        private void LogsDataGrid_PreviewMouseDoubleClick(object sender, MouseButtonEventArgs e)
-        {
-            if (DataContext is not MainViewModel viewModel)
-                return;
-
-            if (LogsDataGrid.SelectedItem is DataItem item)
-                viewModel.SelectedItem = item;
-
-            if (viewModel.OpenEmployeeCardCommand.CanExecute(null))
-                viewModel.OpenEmployeeCardCommand.Execute(null);
-        }
-
         private void LogsDataGrid_Sorting(object sender, System.Windows.Controls.DataGridSortingEventArgs e)
         {
             e.Handled = true;

@@ -9,13 +9,16 @@ using LogGate.Views;
 using System.Collections.ObjectModel;
 using System.Text;
 using System.Windows;
+using Microsoft.EntityFrameworkCore;
 
 public partial class MainViewModel : ObservableObject
 {
+    private readonly AiReportManager _aiReportManager;
     private readonly AutoImportService _autoImportService;
     private readonly IDataRepository _dataRepository;
     private readonly IDialogService _dialogService;
     private readonly IFileParser _fileParser;
+    private readonly IScheduleService _scheduleService;
 
     [ObservableProperty]
     private int _currentPage = 1;
@@ -76,11 +79,14 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private int _totalPages = 1;
 
-    public MainViewModel(IFileParser fileParser, IDataRepository dataRepository, IDialogService dialogService)
+    public MainViewModel(IFileParser fileParser, IDataRepository dataRepository, IDialogService dialogService,
+                        AiReportManager aiReportManager, IScheduleService scheduleService)
     {
         _dataRepository = dataRepository;
         _fileParser = fileParser;
         _dialogService = dialogService;
+        _aiReportManager = aiReportManager;
+        _scheduleService = scheduleService;
 
         _autoImportService = new AutoImportService(_fileParser, _dataRepository);
         _autoImportService.DataImported += OnAutoDataImported;
@@ -112,46 +118,75 @@ public partial class MainViewModel : ObservableObject
 
     private void ApplyFilters(bool resetPage = true)
     {
-        var query = _dataRepository.GetAllItems();
-
-        if (!string.IsNullOrWhiteSpace(SearchText))
-        {
-            var lowerText = SearchText.ToLower();
-            query = query.Where(x =>
-                (x.FullName != null && x.FullName.ToLower().Contains(lowerText)) ||
-                (x.PassNumber != null && x.PassNumber.ToLower().Contains(lowerText)) ||
-                (x.Department != null && x.Department.ToLower().Contains(lowerText))
-            );
-        }
-
-        if (StartDate.HasValue) query = query.Where(x => x.EventTime >= StartDate.Value);
-        if (EndDate.HasValue) query = query.Where(x => x.EventTime <= EndDate.Value.AddDays(1).AddTicks(-1));
-
-        var memoryData = query.AsEnumerable();
-
-        if (ShowLateArrivals)
-            memoryData = memoryData.Where(x => ScheduleRules.IsLate(x));
-
-        if (ShowEarlyDepartures)
-            memoryData = memoryData.Where(x => ScheduleRules.IsEarlyDeparture(x));
-
-        if (ShowMissingAlcotest)
-            memoryData = memoryData.Where(item => ScheduleRules.RequiresAlcotest(item) && item.AlcotestResult == null);
-
-        var finalDataList = memoryData.ToList();
-
-        FilteredCount = finalDataList.Count;
-        TotalPages = (int)Math.Ceiling((double)FilteredCount / PageSize);
-        if (TotalPages == 0) TotalPages = 1;
-        if (resetPage) CurrentPage = 1;
-
-        var sortedData = ApplySorting(finalDataList);
-        var pagedData = sortedData.Skip((CurrentPage - 1) * PageSize).Take(PageSize);
-
-        DataItems = new ObservableCollection<DataItem>(pagedData);
+        _ = ApplyFiltersAsync(resetPage);
     }
 
-    private IEnumerable<DataItem> ApplySorting(IEnumerable<DataItem> query)
+    private async Task ApplyFiltersAsync(bool resetPage = true)
+    {
+        StatusMessage = "Загрузка и фильтрация данных...";
+
+        try
+        {
+            var query = _dataRepository.GetAllItems();
+
+            if (!string.IsNullOrWhiteSpace(SearchText))
+            {
+                var lowerText = SearchText.ToLower();
+                query = query.Where(x =>
+                    (x.FullName != null && x.FullName.ToLower().Contains(lowerText)) ||
+                    (x.PassNumber != null && x.PassNumber.ToLower().Contains(lowerText)) ||
+                    (x.Department != null && x.Department.ToLower().Contains(lowerText))
+                );
+            }
+
+            if (StartDate.HasValue) query = query.Where(x => x.EventTime >= StartDate.Value);
+            if (EndDate.HasValue) query = query.Where(x => x.EventTime <= EndDate.Value.AddDays(1).AddTicks(-1));
+
+            query = ApplySorting(query);
+
+            List<DataItem> finalDataList;
+
+            if (ShowLateArrivals || ShowEarlyDepartures || ShowMissingAlcotest)
+            {
+                var memoryData = await query.ToListAsync();
+
+                if (ShowLateArrivals)
+                    memoryData = memoryData.Where(x => _scheduleService.IsLate(x)).ToList();
+
+                if (ShowEarlyDepartures)
+                    memoryData = memoryData.Where(x => _scheduleService.IsEarlyDeparture(x)).ToList();
+
+                if (ShowMissingAlcotest)
+                    memoryData = memoryData.Where(item => _scheduleService.RequiresAlcotest(item) && item.AlcotestResult == null).ToList();
+
+                finalDataList = memoryData;
+
+                FilteredCount = finalDataList.Count;
+                TotalPages = (int)Math.Ceiling((double)FilteredCount / PageSize);
+                if (TotalPages == 0) TotalPages = 1;
+                if (resetPage) CurrentPage = 1;
+
+                var pagedData = finalDataList.Skip((CurrentPage - 1) * PageSize).Take(PageSize);
+                DataItems = new ObservableCollection<DataItem>(pagedData);
+            }
+            else
+            {
+                FilteredCount = await query.CountAsync();
+                TotalPages = (int)Math.Ceiling((double)FilteredCount / PageSize);
+                if (TotalPages == 0) TotalPages = 1;
+                if (resetPage) CurrentPage = 1;
+
+                finalDataList = await query.Skip((CurrentPage - 1) * PageSize).Take(PageSize).ToListAsync();
+                DataItems = new ObservableCollection<DataItem>(finalDataList);
+            }
+        }
+        finally
+        {
+            StatusMessage = $"Готово.";
+        }
+    }
+
+    private IQueryable<DataItem> ApplySorting(IQueryable<DataItem> query)
     {
         return SortColumn switch
         {
@@ -175,156 +210,68 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task GenerateAiReportAsync()
     {
-        var query = _dataRepository.GetAllItems();
-
-        if (!string.IsNullOrWhiteSpace(SearchText))
-        {
-            var lowerText = SearchText.ToLower();
-            query = query.Where(x =>
-                (x.FullName != null && x.FullName.ToLower().Contains(lowerText)) ||
-                (x.PassNumber != null && x.PassNumber.ToLower().Contains(lowerText)) ||
-                (x.Department != null && x.Department.ToLower().Contains(lowerText))
-            );
-        }
-        if (StartDate.HasValue) query = query.Where(x => x.EventTime >= StartDate.Value);
-        if (EndDate.HasValue) query = query.Where(x => x.EventTime <= EndDate.Value.AddDays(1).AddTicks(-1));
-
-        var fullData = query.ToList();
-
-        if (fullData.Count == 0)
-        {
-            MessageBox.Show("Нет данных для анализа за этот период.", "Внимание", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
-        }
-
-        int totalRecords = fullData.Count;
-        int totalEmployees = fullData.Where(x => x.FullName != null).Select(x => x.FullName).Distinct().Count();
-
-        var violators = fullData.Where(item =>
-            (item.Temperature > 37.2) ||
-            (item.AlcotestResult > 0) ||
-            (ScheduleRules.RequiresAlcotest(item) && item.AlcotestResult == null) ||
-            ScheduleRules.IsLate(item) ||
-            ScheduleRules.IsEarlyDeparture(item)
-        ).ToList();
-
-        if (violators.Count == 0)
-        {
-            MessageBox.Show("За выбранный период нарушений не найдено. Все сотрудники соблюдали правила!", "Внимание", MessageBoxButton.OK, MessageBoxImage.Information);
-            return;
-        }
-
-        var shedule = _dataRepository.GetAllWorkRules().ToList();
-
-        var sb = new StringBuilder();
-
-        sb.AppendLine("=== ВНУТРЕННИЕ РЕГЛАМЕНТЫ ПРЕДПРИЯТИЯ ===");
-
-        var alcoRequiredTargets = _dataRepository.GetAllWorkRules()
-            .Where(r => r.RequiresAlcotest)
-            .Select(r => r.TargetName)
-            .ToList();
-
-        sb.AppendLine("Отделы и сотрудники, обязанные проходить алкотест:");
-        if (alcoRequiredTargets.Count != 0)
-            sb.AppendLine(string.Join(", ", alcoRequiredTargets));
-        else
-            sb.AppendLine("- Обязательное прохождение не назначено.");
-        sb.AppendLine();
-
-        sb.AppendLine("Установленные графики работы:");
-        var workRules = _dataRepository.GetAllWorkRules();
-        if (workRules.Count != 0)
-        {
-            foreach (var rule in workRules)
-            {
-                string targetType = rule.IsPersonal ? "(Индивидуальный)" : "(Отдел)";
-                sb.AppendLine($"- {rule.TargetName} {targetType}: с {rule.StartTime:hh\\:mm} до {rule.EndTime:hh\\:mm}");
-            }
-        }
-        else
-            sb.AppendLine("- Используется стандартный график по умолчанию.");
-        sb.AppendLine();
-
-        sb.AppendLine("=== СТАТИСТИКА ЗА ПЕРИОД ===");
-        sb.AppendLine($"Всего зафиксировано проходов: {totalRecords}");
-        sb.AppendLine($"Всего уникальных сотрудников прошло: {totalEmployees}");
-        sb.AppendLine($"Выявлено нарушений/инцидентов: {violators.Count}");
-        sb.AppendLine();
-
-        sb.AppendLine("=== ДЕТАЛИЗАЦИЯ ИНЦИДЕНТОВ (Только нарушения) ===");
-
-        foreach (var item in violators)
-            sb.AppendLine($"{item.EventTime:dd.MM HH:mm} {item.Direction} | {item.FullName} ({item.Position}, {item.Department}) | Т:{item.Temperature} | Алко:{item.AlcotestResult} | Прим: {item.Note}");
-
-        var reportWindow = new ReportWindow();
-        if (Application.Current.MainWindow != null)
-            reportWindow.Owner = Application.Current.MainWindow;
-
-        var cts = new CancellationTokenSource();
-
-        EventHandler onWindowClosed = (s, e) =>
-        {
-            try { cts.Cancel(); } catch { }
-        };
-
-        reportWindow.Closed += onWindowClosed;
-        reportWindow.Show();
-
-        try
-        {
-            var aiService = new AiAnalyzerService();
-            string report = await aiService.AnalyzeDataAsync(sb.ToString(), cts.Token);
-
-            if (!cts.IsCancellationRequested)
-                reportWindow.DisplayReport(report);
-        }
-        catch (Exception ex)
-        {
-            if (!cts.IsCancellationRequested)
-            {
-                reportWindow.Close();
-                MessageBox.Show($"Ошибка при обращении к ИИ:\n{ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
-        finally
-        {
-            reportWindow.Closed -= onWindowClosed;
-            cts.Dispose(); // Очищаем память
-        }
+        StatusMessage = "Сбор данных для анализа ИИ...";
+        await _aiReportManager.GenerateReportAsync(SearchText, StartDate, EndDate);
+        StatusMessage = "Анализ завершен.";
     }
 
     private async Task InitializeCalendarAsync()
     {
         int currentYear = DateTime.Now.Year;
-        var cachedDays = _dataRepository.GetShortenedDaysByYear(currentYear);
-        var cachedHolidays = _dataRepository.GetShortenedDaysByYear(currentYear);
-        var workRules = _dataRepository.GetAllWorkRules();
-        ScheduleRules.UpdateRules(workRules, cachedHolidays);
+
+        var cachedHolidays = await _dataRepository.GetShortenedDaysByYearAsync(currentYear);
+
+        if (cachedHolidays.Count == 0)
+        {
+            var calendarService = new CalendarService();
+            cachedHolidays = await calendarService.GetPreHolidaysAsync(currentYear);
+
+            if (cachedHolidays.Count > 0)
+            {
+                await _dataRepository.SaveShortenedDaysAsync(cachedHolidays);
+            }
+        }
+
+        var workRules = await _dataRepository.GetAllWorkRulesAsync();
+        _scheduleService.UpdateRules(workRules, cachedHolidays);
     }
 
     // RelayCommand превратит этот метод в команду LoadDataCommand
     [RelayCommand]
-    private void LoadData()
+    private async Task LoadDataAsync()
     {
         string? selectedPath = _dialogService.OpenFileDialog();
 
         if (string.IsNullOrEmpty(selectedPath))
             return;
 
+        StatusMessage = $"Чтение файла: {System.IO.Path.GetFileName(selectedPath)}...";
+
         var parsedData = _fileParser.Parse(selectedPath);
-        int addedCount = _dataRepository.SaveItems(parsedData);
-        LoadDataFromDatabase();
+
+        StatusMessage = "Сохранение записей в базу данных...";
+        int addedCount = await _dataRepository.SaveItemsAsync(parsedData);
+
+        _ = LoadDataFromDatabaseAsync();
 
         if (addedCount > 0)
+        {
+            StatusMessage = $"Загрузка завершена. Добавлено новых записей: {addedCount}.";
             _dialogService.ShowMessage($"Успешно добавлено новых записей: {addedCount}");
+        }
         else
+        {
+            StatusMessage = "Загрузка завершена. Файл не содержал новых данных.";
             _dialogService.ShowMessage("Все записи из этого файла уже есть в базе данных.");
+        }
     }
 
-    private void LoadDataFromDatabase()
+    private void LoadDataFromDatabase() =>
+        _ = LoadDataFromDatabaseAsync();
+
+    private async Task LoadDataFromDatabaseAsync()
     {
-        TotalCount = _dataRepository.GetAllItems().Count();
+        TotalCount = await _dataRepository.GetAllItems().CountAsync();
         ApplyFilters(resetPage: true);
     }
 
@@ -443,18 +390,16 @@ public partial class MainViewModel : ObservableObject
         if (SelectedItem == null || string.IsNullOrEmpty(SelectedItem.FullName))
             return;
 
-        // Создаем ViewModel для нового окна, передаем ФИО и репозиторий
         var cardViewModel = new EmployeeCardViewModel(SelectedItem.FullName, _dataRepository);
 
-        // Создаем и показываем само окно
         var cardWindow = new EmployeeCardWindow(cardViewModel);
-        cardWindow.Show(); // Show() позволяет открыть несколько карточек, ShowDialog() заблокирует главное окно
+        cardWindow.Show();
     }
 
     [RelayCommand]
     private void OpenScheduleSettings()
     {
-        var settingsViewModel = new ScheduleSettingsViewModel(_dataRepository, _dialogService);
+        var settingsViewModel = new ScheduleSettingsViewModel(_dataRepository, _dialogService, _scheduleService);
         var settingsWindow = new LogGate.Views.ScheduleSettingsWindow(settingsViewModel);
         settingsWindow.ShowDialog();
         ApplyFilters();
@@ -473,6 +418,8 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void ResetFilters()
     {
+        StatusMessage = "Сброс фильтров...";
+
         SearchText = string.Empty;
         StartDate = null;
         EndDate = null;
@@ -484,15 +431,17 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void SaveChanges()
+    private async Task SaveChangesAsync()
     {
         try
         {
-            _dataRepository.SaveChanges();
-            StatusMessage = "Изменения успешно сохранены в базу.";
+            StatusMessage = "Сохранение изменений в базу...";
+            await _dataRepository.SaveChangesAsync();
+            StatusMessage = "Изменения успешно сохранены.";
         }
         catch (Exception ex)
         {
+            StatusMessage = "Ошибка при сохранении данных!";
             MessageBox.Show($"Ошибка сохранения:\n{ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }

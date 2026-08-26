@@ -59,25 +59,32 @@ namespace LogGate.Services
             string fileName = Path.GetFileName(filePath);
             ImportStarted?.Invoke(fileName);
 
-            await Task.Delay(1000);
+            int maxRetries = 10;
+            int delayMs = 500;
 
-            int maxRetries = 3;
             for (int i = 0; i < maxRetries; i++)
             {
                 try
                 {
+                    using (var stream = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.None))
+                    {
+                        stream.Close();
+                    }
+
                     var parsedData = _fileParser.Parse(filePath);
-                    int addedCount = _dataRepository.SaveItems(parsedData);
+
+                    int addedCount = await _dataRepository.SaveItemsAsync(parsedData);
 
                     if (addedCount > 0)
                         DataImported?.Invoke(addedCount);
 
                     File.Delete(filePath);
+
                     break;
                 }
                 catch (IOException)
                 {
-                    await Task.Delay(2000);
+                    await Task.Delay(delayMs);
                 }
                 catch (Exception ex)
                 {

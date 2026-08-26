@@ -7,9 +7,12 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <materialDesign:BundledTheme BaseTheme="Light" PrimaryColor="DeepPurple" SecondaryColor="Lime" />
-
                 <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesign2.Defaults.xaml" />
             </ResourceDictionary.MergedDictionaries>
+            <SolidColorBrush x:Key="WarningTempBrush" Color="#FFE0B2" />
+            <SolidColorBrush x:Key="DangerAlcoBrush" Color="#FFCDD2" />
+            <SolidColorBrush x:Key="WarningLateBrush" Color="#FFF9C4" />
+            <SolidColorBrush x:Key="WarningEarlyBrush" Color="#FFCCBC" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

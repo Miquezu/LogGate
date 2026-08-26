@@ -2,6 +2,7 @@
 using LogGate.Interfaces;
 using LogGate.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System.Windows;
@@ -15,17 +16,30 @@ namespace LogGate
             AppHost = Host.CreateDefaultBuilder()
                 .ConfigureServices((context, services) =>
                 {
-                    // 1. База данных
-                    services.AddDbContext<AppDBContext>();
+                    services.AddDbContext<AppDBContext>(options =>
+                    {
+                        var connectionString = context.Configuration.GetConnectionString("DefaultConnection");
+
+                        if (string.IsNullOrEmpty(connectionString))
+                            connectionString = "Data Source=app_data.db";
+
+                        var connection = new Microsoft.Data.Sqlite.SqliteConnection(connectionString);
+                        connection.Open();
+                        connection.CreateFunction("lower", (string x) => x?.ToLower());
+
+                        options.UseSqlite(connection);
+                    });
 
                     // 2. Сервисы (Singleton - один экземпляр на всю программу, Scoped - на один цикл работы)
                     services.AddSingleton<IFileParser, CsvFileParser>();
                     services.AddSingleton<IDialogService, OpenDialog>();
+                    services.AddSingleton<IScheduleService, ScheduleService>();
                     services.AddScoped<IDataRepository, DataRepository>();
 
                     // 3. ViewModels и Окна (Transient - новый экземпляр при каждом запросе)
                     services.AddTransient<MainViewModel>();
                     services.AddTransient<MainWindow>();
+                    services.AddTransient<AiReportManager>();
                 })
                 .Build();
         }

@@ -1,5 +1,7 @@
-﻿using LogGate.Models;
-using LogGate.Services;
+﻿using LogGate.Interfaces;
+using LogGate.Models;
+using Microsoft.Extensions.DependencyInjection;
+using System;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
@@ -19,20 +21,24 @@ namespace LogGate.Converters
                 {
                     case "Temp":
                         if (item.Temperature.HasValue && item.Temperature.Value > 37.0)
-                            return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFE0B2"));
+                            return Application.Current.FindResource("WarningTempBrush");
                         break;
 
                     case "Alco":
                         if (item.AlcotestResult > 0)
-                            return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFCDD2")); // Красный
+                            return Application.Current.FindResource("DangerAlcoBrush");
                         break;
 
                     case "Time":
-                        if (ScheduleRules.IsLate(item))
-                            return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFF9C4")); // Желтый
+                        var scheduleService = App.AppHost?.Services.GetService<IScheduleService>();
+                        if (scheduleService != null)
+                        {
+                            if (scheduleService.IsLate(item))
+                                return Application.Current.FindResource("WarningLateBrush");
 
-                        if (ScheduleRules.IsEarlyDeparture(item))
-                            return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFCCBC")); // Персиковый
+                            if (scheduleService.IsEarlyDeparture(item))
+                                return Application.Current.FindResource("WarningEarlyBrush");
+                        }
                         break;
                 }
             }

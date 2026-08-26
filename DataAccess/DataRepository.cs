@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LogGate.DataAccess
 {
-    internal class DataRepository : IDataRepository, IDisposable
+    internal class DataRepository : IDataRepository
     {
         private readonly AppDBContext _context;
 
@@ -14,53 +14,54 @@ namespace LogGate.DataAccess
             _context = context;
         }
 
-        public void Dispose() => _context?.Dispose();
-
         public IQueryable<DataItem> GetAllItems() => _context.DataItems;
 
         public IQueryable<WorkScheduleRule> GetAllSchedules() => _context.WorkScheduleRules;
 
-        public List<WorkScheduleRule> GetAllWorkRules() => _context.WorkScheduleRules.ToList();
+        public async Task<List<WorkScheduleRule>> GetAllWorkRulesAsync() =>
+            await _context.WorkScheduleRules.ToListAsync();
 
-        public List<DateTime> GetShortenedDaysByYear(int year) =>
-             _context.ShortenedWorkDays
+        public async Task<List<DateTime>> GetShortenedDaysByYearAsync(int year) =>
+             await _context.ShortenedWorkDays
                 .Where(x => x.Date.Year == year)
                 .Select(x => x.Date)
-                .ToList();
+                .ToListAsync();
 
-        public void SaveChanges() => _context.SaveChanges();
+        public async Task SaveChangesAsync() => await _context.SaveChangesAsync();
 
-        public int SaveItems(IEnumerable<DataItem> items)
+        public async Task<int> SaveItemsAsync(IEnumerable<DataItem> items)
         {
-            var existingKeys = _context.DataItems
+            var existingKeys = await _context.DataItems
                 .Select(x => new { x.RecordNumber, x.EventTime })
-                .AsEnumerable()
+                .ToListAsync();
+
+            var existingHashSet = existingKeys
                 .Select(x => (x.RecordNumber, x.EventTime))
                 .ToHashSet();
 
             var filteredItems = items
-                .Where(item => !existingKeys.Contains((item.RecordNumber, item.EventTime)))
+                .Where(item => !existingHashSet.Contains((item.RecordNumber, item.EventTime)))
                 .ToList();
 
             if (filteredItems.Count != 0)
             {
-                _context.DataItems.AddRange(filteredItems);
-                _context.SaveChanges();
+                await _context.DataItems.AddRangeAsync(filteredItems);
+                await _context.SaveChangesAsync();
                 return filteredItems.Count;
             }
             return 0;
         }
 
-        public void SaveShortenedDays(IEnumerable<DateTime> dates)
+        public async Task SaveShortenedDaysAsync(IEnumerable<DateTime> dates)
         {
             var entities = dates.Select(d => new ShortenedWorkDay { Date = d });
-            _context.ShortenedWorkDays.AddRange(entities);
-            _context.SaveChanges();
+            await _context.ShortenedWorkDays.AddRangeAsync(entities);
+            await _context.SaveChangesAsync();
         }
 
-        public void SaveWorkRules(IEnumerable<WorkScheduleRule> rules)
+        public async Task SaveWorkRulesAsync(IEnumerable<WorkScheduleRule> rules)
         {
-            var existingRules = _context.WorkScheduleRules.ToList();
+            var existingRules = await _context.WorkScheduleRules.ToListAsync();
             if (existingRules.Any())
                 _context.WorkScheduleRules.RemoveRange(existingRules);
 
@@ -74,8 +75,9 @@ namespace LogGate.DataAccess
             }).ToList();
 
             if (cleanRules.Any())
-                _context.WorkScheduleRules.AddRange(cleanRules);
-            _context.SaveChanges();
+                await _context.WorkScheduleRules.AddRangeAsync(cleanRules);
+
+            await _context.SaveChangesAsync();
         }
     }
 }

@@ -6,16 +6,16 @@ namespace LogGate.Interfaces
     {
         IQueryable<DataItem> GetAllItems();
 
-        List<WorkScheduleRule> GetAllWorkRules();
+        Task<List<WorkScheduleRule>> GetAllWorkRulesAsync();
 
-        List<DateTime> GetShortenedDaysByYear(int year);
+        Task<List<DateTime>> GetShortenedDaysByYearAsync(int year);
 
-        void SaveChanges();
+        Task SaveChangesAsync();
 
-        int SaveItems(IEnumerable<DataItem> items);
+        Task<int> SaveItemsAsync(IEnumerable<DataItem> items);
 
-        void SaveShortenedDays(IEnumerable<DateTime> dates);
+        Task SaveShortenedDaysAsync(IEnumerable<DateTime> dates);
 
-        void SaveWorkRules(IEnumerable<WorkScheduleRule> rules);
+        Task SaveWorkRulesAsync(IEnumerable<WorkScheduleRule> rules);
     }
 }

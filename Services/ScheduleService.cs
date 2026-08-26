@@ -1,13 +1,14 @@
-﻿using LogGate.Models;
+﻿using LogGate.Interfaces;
+using LogGate.Models;
 
 namespace LogGate.Services
 {
-    public static class ScheduleRules
+    public class ScheduleService : IScheduleService
     {
-        public static List<DateTime> PreHolidays { get; private set; } = new();
-        public static List<WorkScheduleRule> Rules { get; private set; } = new();
+        public List<DateTime> PreHolidays { get; private set; } = new();
+        public List<WorkScheduleRule> Rules { get; private set; } = new();
 
-        public static bool IsEarlyDeparture(DataItem x)
+        public bool IsEarlyDeparture(DataItem x)
         {
             if (Rules.Count == 0 || !x.EventTime.HasValue || x.Direction != "Выход") return false;
 
@@ -26,7 +27,7 @@ namespace LogGate.Services
             return eventMinutes < limit;
         }
 
-        public static bool IsLate(DataItem x)
+        public bool IsLate(DataItem x)
         {
             if (Rules.Count == 0 || !x.EventTime.HasValue || x.Direction != "Вход") return false;
 
@@ -41,7 +42,7 @@ namespace LogGate.Services
             return eventMinutes > startMinutes + 1;
         }
 
-        public static bool RequiresAlcotest(DataItem item)
+        public bool RequiresAlcotest(DataItem item)
         {
             var rule = Rules.FirstOrDefault(r => r.IsPersonal && r.TargetName == item.FullName) ??
                        Rules.FirstOrDefault(r => !r.IsPersonal && r.TargetName == item.Department);
@@ -49,7 +50,7 @@ namespace LogGate.Services
             return rule?.RequiresAlcotest ?? false;
         }
 
-        public static void UpdateRules(List<WorkScheduleRule> rules, List<DateTime> holidays)
+        public void UpdateRules(List<WorkScheduleRule> rules, List<DateTime> holidays)
         {
             Rules = rules;
             PreHolidays = holidays;

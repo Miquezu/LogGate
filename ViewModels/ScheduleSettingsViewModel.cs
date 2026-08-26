@@ -11,6 +11,7 @@ namespace LogGate.ViewModels
     {
         private readonly IDataRepository _dataRepository;
         private readonly IDialogService _dialogService;
+        private readonly IScheduleService _scheduleService;
 
         [ObservableProperty]
         private DateTime? _newEndTime = new DateTime(2000, 1, 1, 16, 30, 0);
@@ -31,11 +32,13 @@ namespace LogGate.ViewModels
         [ObservableProperty]
         private WorkScheduleRule? _selectedRule;
 
-        public ScheduleSettingsViewModel(IDataRepository dataRepository, IDialogService dialogService)
+        public ScheduleSettingsViewModel(IDataRepository dataRepository, IDialogService dialogService, IScheduleService scheduleService)
         {
             _dataRepository = dataRepository;
             _dialogService = dialogService;
-            LoadRules();
+            _scheduleService = scheduleService;
+
+            _ = LoadRulesAsync(); // Асинхронный вызов без блокировки
         }
 
         [RelayCommand]
@@ -66,21 +69,21 @@ namespace LogGate.ViewModels
                 Rules.Remove(SelectedRule);
         }
 
-        private void LoadRules()
+        private async Task LoadRulesAsync()
         {
-            var dbRules = _dataRepository.GetAllWorkRules();
+            var dbRules = await _dataRepository.GetAllWorkRulesAsync();
             Rules = new ObservableCollection<WorkScheduleRule>(dbRules);
         }
 
         [RelayCommand]
-        private void SaveChanges()
+        private async Task SaveChangesAsync()
         {
             try
             {
                 var rulesList = Rules.ToList();
-                _dataRepository.SaveWorkRules(rulesList);
+                await _dataRepository.SaveWorkRulesAsync(rulesList);
 
-                ScheduleRules.UpdateRules(rulesList, ScheduleRules.PreHolidays);
+                _scheduleService.UpdateRules(rulesList, _scheduleService.PreHolidays);
 
                 _dialogService.ShowMessage("Настройки графиков успешно сохранены!");
             }

@@ -171,7 +171,6 @@
             HeadersVisibility="All"
             IsReadOnly="False"
             ItemsSource="{Binding DataItems}"
-            PreviewMouseDoubleClick="LogsDataGrid_PreviewMouseDoubleClick"
             RowHeight="33"
             SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
             Sorting="LogsDataGrid_Sorting">
@@ -216,7 +215,7 @@
                     Binding="{Binding Direction}"
                     Header="Вх./выход"
                     IsReadOnly="True"
-                    SortMemberPath="Direcrion" />
+                    SortMemberPath="Direction" />
                 <DataGridTextColumn
                     Width="SizeToCells"
                     Binding="{Binding TemperatureTime, StringFormat=\{0:HH:mm:ss\}}"
@@ -270,7 +269,7 @@
                     Binding="{Binding Department}"
                     Header="Подразделение"
                     IsReadOnly="True"
-                    SortMemberPath="Departament" />
+                    SortMemberPath="Department" />
                 <DataGridTextColumn
                     Width="SizeToCells"
                     Binding="{Binding EmployeeNumber}"
