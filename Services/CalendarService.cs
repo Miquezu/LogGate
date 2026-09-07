@@ -23,8 +23,7 @@ namespace LogGate.Services
                 for (int i = 0; i < response.Length; i++)
                 {
                     // Сервис возвращает '2' для сокращенных рабочих дней
-                    if (response[i] == '2')
-                        preHolidays.Add(startDate.AddDays(i));
+                    if (response[i] == '2') preHolidays.Add(startDate.AddDays(i));
                 }
             }
             catch (Exception)

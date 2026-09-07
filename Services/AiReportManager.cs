@@ -1,8 +1,11 @@
 ﻿using LogGate.Interfaces;
-using LogGate.Views;
 using Microsoft.EntityFrameworkCore;
 using System.Text;
 using System.Windows;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using System;
 
 namespace LogGate.Services
 {
@@ -30,10 +33,10 @@ namespace LogGate.Services
                     (x.Department != null && x.Department.ToLower().Contains(lowerText))
                 );
             }
+
             if (startDate.HasValue) query = query.Where(x => x.EventTime >= startDate.Value);
             if (endDate.HasValue) query = query.Where(x => x.EventTime <= endDate.Value.AddDays(1).AddTicks(-1));
 
-            // Асинхронно выгружаем данные
             var fullData = await query.ToListAsync();
 
             if (fullData.Count == 0)
@@ -55,11 +58,36 @@ namespace LogGate.Services
 
             if (violators.Count == 0)
             {
-                MessageBox.Show("За выбранный период нарушений не найдено. Все сотрудники соблюдали правила!", "Внимание", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("За выбранный период нарушений не найдено.", "Внимание", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
-            // Асинхронно получаем правила из БД
+            var tokenToRealValue = new Dictionary<string, string>();
+            var realValueToToken = new Dictionary<string, string>();
+            int empCounter = 1;
+            int depCounter = 1;
+            int posCounter = 1;
+
+            string GetMaskedValue(string? realValue, string prefix, ref int counter)
+            {
+                if (string.IsNullOrWhiteSpace(realValue)) return "Н/Д";
+
+                if (!realValueToToken.TryGetValue(realValue, out string? token))
+                {
+                    token = $"{prefix}_{counter:D3}";
+                    realValueToToken[realValue] = token;
+                    tokenToRealValue[token] = realValue;
+                    counter++;
+                }
+                return token;
+            }
+
+            string GetTargetToken(string? targetName, bool isPersonal)
+            {
+                if (isPersonal) return GetMaskedValue(targetName, "EMP", ref empCounter);
+                return GetMaskedValue(targetName, "DEP", ref depCounter);
+            }
+
             var workRules = await _dataRepository.GetAllWorkRulesAsync();
 
             var sb = new StringBuilder();
@@ -67,14 +95,16 @@ namespace LogGate.Services
 
             var alcoRequiredTargets = workRules
                 .Where(r => r.RequiresAlcotest)
-                .Select(r => r.TargetName)
+                .Select(r => GetTargetToken(r.TargetName, r.IsPersonal))
                 .ToList();
 
             sb.AppendLine("Отделы и сотрудники, обязанные проходить алкотест:");
+
             if (alcoRequiredTargets.Count != 0)
                 sb.AppendLine(string.Join(", ", alcoRequiredTargets));
             else
                 sb.AppendLine("- Обязательное прохождение не назначено.");
+
             sb.AppendLine();
 
             sb.AppendLine("Установленные графики работы:");
@@ -83,7 +113,8 @@ namespace LogGate.Services
                 foreach (var rule in workRules)
                 {
                     string targetType = rule.IsPersonal ? "(Индивидуальный)" : "(Отдел)";
-                    sb.AppendLine($"- {rule.TargetName} {targetType}: с {rule.StartTime:hh\\:mm} до {rule.EndTime:hh\\:mm}");
+                    string maskedTarget = GetTargetToken(rule.TargetName, rule.IsPersonal);
+                    sb.AppendLine($"- {maskedTarget} {targetType}: с {rule.StartTime:hh\\:mm} до {rule.EndTime:hh\\:mm}");
                 }
             }
             else
@@ -94,43 +125,25 @@ namespace LogGate.Services
             sb.AppendLine($"Всего зафиксировано проходов: {totalRecords}");
             sb.AppendLine($"Всего уникальных сотрудников прошло: {totalEmployees}");
             sb.AppendLine($"Выявлено нарушений/инцидентов: {violators.Count}");
-            sb.AppendLine();
 
-            sb.AppendLine("=== ДЕТАЛИЗАЦИЯ ИНЦИДЕНТОВ (Только нарушения) ===");
-
+            // Отдельный список логов для динамического RAG-фильтра
+            var logLines = new List<string>();
             foreach (var item in violators)
-                sb.AppendLine($"{item.EventTime:dd.MM HH:mm} {item.Direction} | {item.FullName} ({item.Position}, {item.Department}) | Т:{item.Temperature} | Алко:{item.AlcotestResult} | Прим: {item.Note}");
+            {
+                string empToken = GetMaskedValue(item.FullName, "EMP", ref empCounter);
+                string depToken = GetMaskedValue(item.Department, "DEP", ref depCounter);
+                string posToken = GetMaskedValue(item.Position, "POS", ref posCounter);
 
-            var reportWindow = new ReportWindow();
+                logLines.Add($"{item.EventTime:dd.MM HH:mm} {item.Direction} | {empToken} ({posToken}, {depToken}) | Т:{item.Temperature} | Алко:{item.AlcotestResult} | Сист:{item.SystemNote} | Прим: {item.Note}");
+            }
+
+            var chatViewModel = new ViewModels.AiChatViewModel(sb.ToString(), logLines, tokenToRealValue, realValueToToken);
+            var chatWindow = new Views.AiChatWindow(chatViewModel);
+
             if (Application.Current.MainWindow != null)
-                reportWindow.Owner = Application.Current.MainWindow;
+                chatWindow.Owner = Application.Current.MainWindow;
 
-            var cts = new CancellationTokenSource();
-            EventHandler onWindowClosed = (s, e) => { try { cts.Cancel(); } catch { } };
-            reportWindow.Closed += onWindowClosed;
-            reportWindow.Show();
-
-            try
-            {
-                var aiService = new AiAnalyzerService();
-                string report = await aiService.AnalyzeDataAsync(sb.ToString(), cts.Token);
-
-                if (!cts.IsCancellationRequested)
-                    reportWindow.DisplayReport(report);
-            }
-            catch (Exception ex)
-            {
-                if (!cts.IsCancellationRequested)
-                {
-                    reportWindow.Close();
-                    MessageBox.Show($"Ошибка при обращении к ИИ:\n{ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-            }
-            finally
-            {
-                reportWindow.Closed -= onWindowClosed;
-                cts.Dispose();
-            }
+            chatWindow.Show();
         }
     }
 }

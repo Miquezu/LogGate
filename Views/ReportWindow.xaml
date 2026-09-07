@@ -11,7 +11,7 @@
     <Grid Margin="10">
         <!-- Панель загрузки (крутится, пока ждем ответ) -->
         <StackPanel x:Name="LoadingPanel" VerticalAlignment="Center" HorizontalAlignment="Center">
-            <TextBlock Text="Анализ данных турникета..." FontSize="16" Margin="0,0,0,15" HorizontalAlignment="Center" />
+            <TextBlock Text="Анализ данных..." FontSize="16" Margin="0,0,0,15" HorizontalAlignment="Center" />
             <ProgressBar IsIndeterminate="True" Width="250" Height="20" />
         </StackPanel>
 

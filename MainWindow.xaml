@@ -284,6 +284,11 @@
                     SortMemberPath="PassNumber" />
                 <DataGridTextColumn
                     Width="Auto"
+                    Binding="{Binding SystemNote}"
+                    Header="Системный статус"
+                    IsReadOnly="True" />
+                <DataGridTextColumn
+                    Width="Auto"
                     Binding="{Binding Note, UpdateSourceTrigger=PropertyChanged}"
                     Header="Примечание" />
             </DataGrid.Columns>

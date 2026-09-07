@@ -15,6 +15,7 @@
         public string? Position { get; set; }
         public string? Post { get; set; }
         public string? RecordNumber { get; set; }
+        public string? SystemNote { get; set; }
         public double? Temperature { get; set; }
         public DateTime? TemperatureTime { get; set; }
     }

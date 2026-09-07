@@ -18,7 +18,6 @@ namespace LogGate.Services
             return null;
         }
 
-        public void ShowMessage(string message)
-            => MessageBox.Show(message, "Уведомление", MessageBoxButton.OK, MessageBoxImage.Information);
+        public void ShowMessage(string message) => MessageBox.Show(message, "Уведомление", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 }
