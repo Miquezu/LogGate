@@ -9,6 +9,8 @@ namespace LogGate.Models
             Map(m => m.Id).Ignore();
             Map(m => m.Note).Ignore();
             Map(m => m.SystemNote).Ignore();
+            Map(m => m.IsLate).Ignore();
+            Map(m => m.IsEarlyDeparture).Ignore();
 
             Map(m => m.RecordNumber).Name("№ п/п");
             Map(m => m.Post).Name("Пост");

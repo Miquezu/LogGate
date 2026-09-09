@@ -1,4 +1,6 @@
 ﻿using LogGate.Interfaces;
+using LogGate.ViewModels;
+using LogGate.Views;
 using Microsoft.Win32;
 using System.Windows;
 
@@ -6,6 +8,20 @@ namespace LogGate.Services
 {
     public class OpenDialog : IDialogService
     {
+        public void OpenAiChat(AiChatViewModel viewModel)
+        {
+            var window = new AiChatWindow(viewModel);
+            SetOwner(window);
+            window.Show();
+        }
+
+        public void OpenEmployeeCard(EmployeeCardViewModel viewModel)
+        {
+            var window = new EmployeeCardWindow(viewModel);
+            SetOwner(window);
+            window.Show();
+        }
+
         public string? OpenFileDialog()
         {
             var dialog = new OpenFileDialog
@@ -14,10 +30,31 @@ namespace LogGate.Services
                 Filter = "CSV files(*.csv)|*.csv|All files(*.*)|*.*"
             };
             bool? result = dialog.ShowDialog();
-            if (result == true) return dialog.FileName;
-            return null;
+            return result == true ? dialog.FileName : null;
         }
 
-        public void ShowMessage(string message) => MessageBox.Show(message, "Уведомление", MessageBoxButton.OK, MessageBoxImage.Information);
+        public bool? OpenScheduleSettings(ScheduleSettingsViewModel viewModel)
+        {
+            var window = new ScheduleSettingsWindow(viewModel);
+            SetOwner(window);
+            return window.ShowDialog();
+        }
+
+        public void ShowError(string message, string title = "Ошибка") =>
+            MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Error);
+
+        public void ShowMessage(string message, string title = "Уведомление") =>
+                            MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Information);
+
+        public void ShowWarning(string message, string title = "Внимание") =>
+            MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Warning);
+
+        private static void SetOwner(Window window)
+        {
+            if (Application.Current.MainWindow != null && Application.Current.MainWindow != window)
+            {
+                window.Owner = Application.Current.MainWindow;
+            }
+        }
     }
 }

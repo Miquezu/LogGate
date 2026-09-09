@@ -29,16 +29,12 @@ namespace LogGate.ViewModels
             LoadEmployeeData();
         }
 
-        private void LoadEmployeeData()
+        private async void LoadEmployeeData()
         {
-            // Вытягиваем из БД все записи по конкретному ФИО, сортируем от новых к старым
-            var history = _dataRepository.GetAllItems()
-                .Where(x => x.FullName == _employeeName)
-                .OrderByDescending(x => x.EventTime)
-                .ToList();
-
+            var history = await _dataRepository.GetEmployeeHistoryAsync(_employeeName);
             TotalRecords = history.Count;
 
+            EmployeeHistory.Clear();
             foreach (var item in history)
             {
                 EmployeeHistory.Add(item);

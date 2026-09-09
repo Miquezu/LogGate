@@ -1,14 +1,21 @@
 ﻿using LogGate.Models;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace LogGate.Interfaces
 {
     public interface IDataRepository
     {
-        IQueryable<DataItem> GetAllItems();
-
         Task<List<WorkScheduleRule>> GetAllWorkRulesAsync();
 
+        Task<List<DataItem>> GetEmployeeHistoryAsync(string employeeName);
+
+        Task<List<DataItem>> GetFilteredLogsAsync(string? searchText, DateTime? startDate, DateTime? endDate);
+
         Task<List<DateTime>> GetShortenedDaysByYearAsync(int year);
+
+        Task<int> GetTotalCountAsync();
 
         Task SaveChangesAsync();
 

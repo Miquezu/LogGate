@@ -1,4 +1,6 @@
-﻿namespace LogGate.Models
+﻿using System.ComponentModel.DataAnnotations.Schema;
+
+namespace LogGate.Models
 {
     public class DataItem
     {
@@ -10,6 +12,13 @@
         public DateTime? EventTime { get; set; }
         public string? FullName { get; set; }
         public int Id { get; set; }
+
+        [NotMapped]
+        public bool IsEarlyDeparture { get; set; }
+
+        [NotMapped]
+        public bool IsLate { get; set; }
+
         public string? Note { get; set; }
         public string? PassNumber { get; set; }
         public string? Position { get; set; }

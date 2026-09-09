@@ -1,7 +1,6 @@
 ﻿using LogGate.Models;
 using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace LogGate.Interfaces
 {
@@ -9,6 +8,10 @@ namespace LogGate.Interfaces
     {
         List<DateTime> PreHolidays { get; }
         List<WorkScheduleRule> Rules { get; }
+
+        void EvaluateCompliance(IEnumerable<DataItem> items);
+
+        WorkScheduleRule? GetRuleFor(DataItem item);
 
         bool IsEarlyDeparture(DataItem x);
 

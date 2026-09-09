@@ -1,11 +1,8 @@
-﻿using LogGate.Interfaces;
-using LogGate.Models;
-using Microsoft.Extensions.DependencyInjection;
+﻿using LogGate.Models;
 using System;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
-using System.Windows.Media;
 
 namespace LogGate.Converters
 {
@@ -30,15 +27,11 @@ namespace LogGate.Converters
                         break;
 
                     case "Time":
-                        var scheduleService = App.AppHost?.Services.GetService<IScheduleService>();
-                        if (scheduleService != null)
-                        {
-                            if (scheduleService.IsLate(item))
-                                return Application.Current.FindResource("WarningLateBrush");
+                        if (item.IsLate)
+                            return Application.Current.FindResource("WarningLateBrush");
 
-                            if (scheduleService.IsEarlyDeparture(item))
-                                return Application.Current.FindResource("WarningEarlyBrush");
-                        }
+                        if (item.IsEarlyDeparture)
+                            return Application.Current.FindResource("WarningEarlyBrush");
                         break;
                 }
             }

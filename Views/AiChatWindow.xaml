@@ -120,6 +120,8 @@
                 Grid.Column="1"
                 Margin="15,0,0,0"
                 VerticalAlignment="Center">
+
+                <!-- Кнопка отправки (видима, когда система свободна) -->
                 <Button
                     Width="50"
                     Height="50"
@@ -140,12 +142,22 @@
                         Kind="Send" />
                 </Button>
 
-                <ProgressBar
-                    Width="40"
-                    Height="40"
-                    IsIndeterminate="True"
-                    Style="{StaticResource MaterialDesignCircularProgressBar}"
-                    Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                <!-- Кнопка остановки генерации и спиннер (видимы во время работы) -->
+                <StackPanel Orientation="Horizontal" Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Button
+                        Width="50"
+                        Height="50"
+                        Command="{Binding CancelGenerationCommand}"
+                        Style="{StaticResource MaterialDesignFloatingActionMiniButton}"
+                        Background="#E53935"
+                        BorderBrush="#E53935"
+                        ToolTip="Остановить генерацию">
+                        <materialDesign:PackIcon
+                            Width="24"
+                            Height="24"
+                            Kind="Stop" />
+                    </Button>
+                </StackPanel>
             </Grid>
         </Grid>
     </Grid>

@@ -1,6 +1,7 @@
 ﻿using LogGate.DataAccess;
 using LogGate.Models;
 using LogGate.Services;
+using LogGate.ViewModels;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Input;

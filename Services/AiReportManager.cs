@@ -1,66 +1,45 @@
 ﻿using LogGate.Interfaces;
-using Microsoft.EntityFrameworkCore;
-using System.Text;
-using System.Windows;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
-using System;
 
 namespace LogGate.Services
 {
     public class AiReportManager
     {
+        private readonly IAiAnalyzerService _aiService;
         private readonly IDataRepository _dataRepository;
+        private readonly IDialogService _dialogService;
         private readonly IScheduleService _scheduleService;
 
-        public AiReportManager(IDataRepository dataRepository, IScheduleService scheduleService)
+        public AiReportManager(
+            IDataRepository dataRepository,
+            IScheduleService scheduleService,
+            IDialogService dialogService,
+            IAiAnalyzerService aiService)
         {
             _dataRepository = dataRepository;
             _scheduleService = scheduleService;
+            _dialogService = dialogService;
+            _aiService = aiService;
         }
 
         public async Task GenerateReportAsync(string searchText, DateTime? startDate, DateTime? endDate)
         {
-            var query = _dataRepository.GetAllItems();
-
-            if (!string.IsNullOrWhiteSpace(searchText))
-            {
-                var lowerText = searchText.ToLower();
-                query = query.Where(x =>
-                    (x.FullName != null && x.FullName.ToLower().Contains(lowerText)) ||
-                    (x.PassNumber != null && x.PassNumber.ToLower().Contains(lowerText)) ||
-                    (x.Department != null && x.Department.ToLower().Contains(lowerText))
-                );
-            }
-
-            if (startDate.HasValue) query = query.Where(x => x.EventTime >= startDate.Value);
-            if (endDate.HasValue) query = query.Where(x => x.EventTime <= endDate.Value.AddDays(1).AddTicks(-1));
-
-            var fullData = await query.ToListAsync();
+            var fullData = await _dataRepository.GetFilteredLogsAsync(searchText, startDate, endDate);
 
             if (fullData.Count == 0)
             {
-                MessageBox.Show("Нет данных для анализа за этот период.", "Внимание", MessageBoxButton.OK, MessageBoxImage.Warning);
+                _dialogService.ShowWarning("Нет данных для анализа за этот период.");
                 return;
             }
+
+            _scheduleService.EvaluateCompliance(fullData);
 
             int totalRecords = fullData.Count;
             int totalEmployees = fullData.Where(x => x.FullName != null).Select(x => x.FullName).Distinct().Count();
-
-            var violators = fullData.Where(item =>
-                (item.Temperature > 37.2) ||
-                (item.AlcotestResult > 0) ||
-                (_scheduleService.RequiresAlcotest(item) && item.AlcotestResult == null) ||
-                _scheduleService.IsLate(item) ||
-                _scheduleService.IsEarlyDeparture(item)
-            ).ToList();
-
-            if (violators.Count == 0)
-            {
-                MessageBox.Show("За выбранный период нарушений не найдено.", "Внимание", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
 
             var tokenToRealValue = new Dictionary<string, string>();
             var realValueToToken = new Dictionary<string, string>();
@@ -99,14 +78,12 @@ namespace LogGate.Services
                 .ToList();
 
             sb.AppendLine("Отделы и сотрудники, обязанные проходить алкотест:");
-
             if (alcoRequiredTargets.Count != 0)
                 sb.AppendLine(string.Join(", ", alcoRequiredTargets));
             else
                 sb.AppendLine("- Обязательное прохождение не назначено.");
 
             sb.AppendLine();
-
             sb.AppendLine("Установленные графики работы:");
             if (workRules.Count != 0)
             {
@@ -118,32 +95,87 @@ namespace LogGate.Services
                 }
             }
             else
+            {
                 sb.AppendLine("- Используется стандартный график по умолчанию.");
+            }
             sb.AppendLine();
+
+            var groupedDays = fullData
+                .Where(x => !string.IsNullOrWhiteSpace(x.FullName) && x.EventTime.HasValue)
+                .GroupBy(x => new { x.FullName, Date = x.EventTime!.Value.Date })
+                .ToList();
+
+            var incidentSummaries = new List<string>();
+            var employeeDailySummaries = new Dictionary<string, List<string>>();
+            int totalIncidentsCount = 0;
+
+            foreach (var dayGroup in groupedDays)
+            {
+                var dayEvents = dayGroup.OrderBy(x => x.EventTime).ToList();
+                var first = dayEvents.First();
+
+                string empToken = GetMaskedValue(first.FullName, "EMP", ref empCounter);
+                string depToken = GetMaskedValue(first.Department, "DEP", ref depCounter);
+                string posToken = GetMaskedValue(first.Position, "POS", ref posCounter);
+
+                var incidentList = new List<string>();
+
+                var lateEntry = dayEvents.FirstOrDefault(x => x.IsLate);
+                if (lateEntry != null)
+                    incidentList.Add($"Опоздание (вход в {lateEntry.EventTime:HH:mm})");
+
+                var earlyExit = dayEvents.FirstOrDefault(x => x.IsEarlyDeparture);
+                if (earlyExit != null)
+                    incidentList.Add($"Ранний уход (выход в {earlyExit.EventTime:HH:mm})");
+
+                var tempIssues = dayEvents.Where(x => x.Temperature > 37.2).ToList();
+                if (tempIssues.Any())
+                    incidentList.Add($"Температура > 37.2 ({string.Join(", ", tempIssues.Select(t => $"{t.EventTime:HH:mm}: {t.Temperature}°C"))})");
+
+                var alcoPositive = dayEvents.Where(x => x.AlcotestResult > 0).ToList();
+                if (alcoPositive.Any())
+                    incidentList.Add($"Положительный алкотест ({string.Join(", ", alcoPositive.Select(a => $"{a.EventTime:HH:mm}: {a.AlcotestResult} мг/л"))})");
+
+                if (_scheduleService.RequiresAlcotest(first) && dayEvents.All(x => x.AlcotestResult == null))
+                    incidentList.Add("Не пройден обязательный алкотест");
+
+                var anomalies = dayEvents.Where(x => !string.IsNullOrWhiteSpace(x.SystemNote)).Select(x => x.SystemNote).Distinct();
+                foreach (var anom in anomalies)
+                    incidentList.Add(anom!);
+
+                string timeline = string.Join(", ", dayEvents.Select(e => $"{e.EventTime:HH:mm} {e.Direction}"));
+                string statusText = incidentList.Count > 0 ? $"Инциденты: {string.Join("; ", incidentList)}" : "Норма";
+
+                string daySummaryLine = $"{dayGroup.Key.Date:dd.MM} | {empToken} ({posToken}, {depToken}) | Проходы: [{timeline}] | Статус: {statusText}";
+
+                if (!employeeDailySummaries.ContainsKey(empToken))
+                    employeeDailySummaries[empToken] = new List<string>();
+
+                employeeDailySummaries[empToken].Add(daySummaryLine);
+
+                if (incidentList.Count > 0)
+                {
+                    incidentSummaries.Add(daySummaryLine);
+                    totalIncidentsCount += incidentList.Count;
+                }
+            }
 
             sb.AppendLine("=== СТАТИСТИКА ЗА ПЕРИОД ===");
             sb.AppendLine($"Всего зафиксировано проходов: {totalRecords}");
             sb.AppendLine($"Всего уникальных сотрудников прошло: {totalEmployees}");
-            sb.AppendLine($"Выявлено нарушений/инцидентов: {violators.Count}");
+            sb.AppendLine($"Всего инцидентов/нарушений: {totalIncidentsCount}");
 
-            // Отдельный список логов для динамического RAG-фильтра
-            var logLines = new List<string>();
-            foreach (var item in violators)
-            {
-                string empToken = GetMaskedValue(item.FullName, "EMP", ref empCounter);
-                string depToken = GetMaskedValue(item.Department, "DEP", ref depCounter);
-                string posToken = GetMaskedValue(item.Position, "POS", ref posCounter);
+            var chatViewModel = new ViewModels.AiChatViewModel(
+                sb.ToString(),
+                incidentSummaries,
+                employeeDailySummaries,
+                tokenToRealValue,
+                realValueToToken,
+                _aiService);
 
-                logLines.Add($"{item.EventTime:dd.MM HH:mm} {item.Direction} | {empToken} ({posToken}, {depToken}) | Т:{item.Temperature} | Алко:{item.AlcotestResult} | Сист:{item.SystemNote} | Прим: {item.Note}");
-            }
+            _dialogService.OpenAiChat(chatViewModel);
 
-            var chatViewModel = new ViewModels.AiChatViewModel(sb.ToString(), logLines, tokenToRealValue, realValueToToken);
-            var chatWindow = new Views.AiChatWindow(chatViewModel);
-
-            if (Application.Current.MainWindow != null)
-                chatWindow.Owner = Application.Current.MainWindow;
-
-            chatWindow.Show();
+            _dialogService.OpenAiChat(chatViewModel);
         }
     }
 }

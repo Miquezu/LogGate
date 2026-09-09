@@ -1,6 +1,7 @@
 ﻿using LogGate.DataAccess;
 using LogGate.Interfaces;
 using LogGate.Services;
+using LogGate.ViewModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,7 +17,8 @@ namespace LogGate
             AppHost = Host.CreateDefaultBuilder()
                 .ConfigureServices((context, services) =>
                 {
-                    services.AddDbContext<AppDBContext>(options =>
+                    // 1. Фабрика контекстов базы данных
+                    services.AddDbContextFactory<AppDBContext>(options =>
                     {
                         var connectionString = context.Configuration.GetConnectionString("DefaultConnection");
 
@@ -30,21 +32,22 @@ namespace LogGate
                         options.UseSqlite(connection);
                     });
 
-                    // 2. Сервисы (Singleton - один экземпляр на всю программу, Scoped - на один цикл работы)
+                    // 2. Сервисы уровня ядра и доменной логики
                     services.AddSingleton<IFileParser, CsvFileParser>();
+                    services.AddSingleton<IDataCleaningService, DataCleaningService>();
                     services.AddSingleton<IDialogService, OpenDialog>();
                     services.AddSingleton<IScheduleService, ScheduleService>();
-                    services.AddScoped<IDataRepository, DataRepository>();
+                    services.AddSingleton<IDataRepository, DataRepository>();
+                    services.AddSingleton<IAiAnalyzerService, AiAnalyzerService>();
+                    services.AddTransient<AiReportManager>();
 
-                    // 3. ViewModels и Окна (Transient - новый экземпляр при каждом запросе)
+                    // 3. ViewModels и представления
                     services.AddTransient<MainViewModel>();
                     services.AddTransient<MainWindow>();
-                    services.AddTransient<AiReportManager>();
                 })
                 .Build();
         }
 
-        // Глобальный хост приложения
         public static IHost? AppHost { get; private set; }
 
         protected override async void OnExit(ExitEventArgs e)
@@ -59,14 +62,13 @@ namespace LogGate
             base.OnStartup(e);
             await AppHost!.StartAsync();
 
-            // Применяем миграции безопасно через DI
             using (var scope = AppHost.Services.CreateScope())
             {
-                var db = scope.ServiceProvider.GetRequiredService<AppDBContext>();
+                var factory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDBContext>>();
+                using var db = factory.CreateDbContext();
                 db.Database.Migrate();
             }
 
-            // Просим DI-контейнер собрать нам MainWindow (со всеми зависимостями!)
             var mainWindow = AppHost.Services.GetRequiredService<MainWindow>();
             mainWindow.Show();
         }
