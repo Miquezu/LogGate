@@ -17,12 +17,12 @@ namespace LogGate.Interfaces
 
         Task<int> GetTotalCountAsync();
 
-        Task SaveChangesAsync();
-
         Task<int> SaveItemsAsync(IEnumerable<DataItem> items);
 
         Task SaveShortenedDaysAsync(IEnumerable<DateTime> dates);
 
         Task SaveWorkRulesAsync(IEnumerable<WorkScheduleRule> rules);
+
+        Task UpdateItemsNotesAsync(IEnumerable<DataItem> items);
     }
 }

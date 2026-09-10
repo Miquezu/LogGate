@@ -1,44 +1,54 @@
-﻿using LogGate.Models;
-using System;
+using LogGate.Models;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
+using System.Windows.Media;
 
-namespace LogGate.Converters
+namespace LogGate.Converters;
+
+public class AnomalyColorConverter : IValueConverter
 {
-    public class AnomalyColorConverter : IValueConverter
+    private static Brush? _warningTempBrush;
+    private static Brush? _dangerAlcoBrush;
+    private static Brush? _warningLateBrush;
+    private static Brush? _warningEarlyBrush;
+
+    private static Brush? GetBrush(ref Brush? cached, string resourceKey)
     {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        return cached ??= Application.Current?.TryFindResource(resourceKey) as Brush;
+    }
+
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is DataItem item && parameter != null)
         {
-            if (value is DataItem item && parameter != null)
+            string? param = parameter.ToString();
+
+            switch (param)
             {
-                string? param = parameter.ToString();
+                case "Temp":
+                    if (item.Temperature > 37.0)
+                        return GetBrush(ref _warningTempBrush, "WarningTempBrush") ?? DependencyProperty.UnsetValue;
+                    break;
 
-                switch (param)
-                {
-                    case "Temp":
-                        if (item.Temperature.HasValue && item.Temperature.Value > 37.0)
-                            return Application.Current.FindResource("WarningTempBrush");
-                        break;
+                case "Alco":
+                    if (item.AlcotestResult > 0)
+                        return GetBrush(ref _dangerAlcoBrush, "DangerAlcoBrush") ?? DependencyProperty.UnsetValue;
+                    break;
 
-                    case "Alco":
-                        if (item.AlcotestResult > 0)
-                            return Application.Current.FindResource("DangerAlcoBrush");
-                        break;
+                case "Time":
+                    if (item.IsLate)
+                        return GetBrush(ref _warningLateBrush, "WarningLateBrush") ?? DependencyProperty.UnsetValue;
 
-                    case "Time":
-                        if (item.IsLate)
-                            return Application.Current.FindResource("WarningLateBrush");
-
-                        if (item.IsEarlyDeparture)
-                            return Application.Current.FindResource("WarningEarlyBrush");
-                        break;
-                }
+                    if (item.IsEarlyDeparture)
+                        return GetBrush(ref _warningEarlyBrush, "WarningEarlyBrush") ?? DependencyProperty.UnsetValue;
+                    break;
             }
-            return DependencyProperty.UnsetValue;
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
-            throw new NotImplementedException();
+        return DependencyProperty.UnsetValue;
     }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+        throw new NotImplementedException();
 }

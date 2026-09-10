@@ -1,4 +1,4 @@
-﻿using LogGate.DataAccess;
+using LogGate.DataAccess;
 using LogGate.Interfaces;
 using LogGate.Services;
 using LogGate.ViewModels;
@@ -29,6 +29,15 @@ namespace LogGate
                         connection.Open();
                         connection.CreateFunction("lower", (string x) => x?.ToLower());
 
+                        using (var pragmaCmd = connection.CreateCommand())
+                        {
+                            pragmaCmd.CommandText = @"
+                                PRAGMA journal_mode = WAL;
+                                PRAGMA synchronous = NORMAL;
+                                PRAGMA temp_store = MEMORY;";
+                            pragmaCmd.ExecuteNonQuery();
+                        }
+
                         options.UseSqlite(connection);
                     });
 
@@ -38,6 +47,7 @@ namespace LogGate
                     services.AddSingleton<IDialogService, OpenDialog>();
                     services.AddSingleton<IScheduleService, ScheduleService>();
                     services.AddSingleton<IDataRepository, DataRepository>();
+                    services.AddSingleton<AutoImportService>();
                     services.AddSingleton<IAiAnalyzerService, AiAnalyzerService>();
                     services.AddTransient<AiReportManager>();
 

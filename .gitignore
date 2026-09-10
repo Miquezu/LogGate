@@ -361,7 +361,7 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
-/app_data.db
+/app_data.db*
 /CodeParser.ps1
 /MergedProjectCode.txt
 /appsettings.json

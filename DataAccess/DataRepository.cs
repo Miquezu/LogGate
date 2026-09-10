@@ -1,4 +1,4 @@
-﻿using LogGate.Interfaces;
+using LogGate.Interfaces;
 using LogGate.Models;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -73,13 +73,6 @@ namespace LogGate.DataAccess
             return await context.DataItems.CountAsync();
         }
 
-        public async Task SaveChangesAsync()
-        {
-            // Метод оставлен для совместимости редактирования примечаний
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            await context.SaveChangesAsync();
-        }
-
         public async Task<int> SaveItemsAsync(IEnumerable<DataItem> items)
         {
             var incomingList = items
@@ -128,9 +121,7 @@ namespace LogGate.DataAccess
         public async Task SaveWorkRulesAsync(IEnumerable<WorkScheduleRule> rules)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
-            var existingRules = await context.WorkScheduleRules.ToListAsync();
-            if (existingRules.Any())
-                context.WorkScheduleRules.RemoveRange(existingRules);
+            await context.WorkScheduleRules.ExecuteDeleteAsync();
 
             var cleanRules = rules.Select(r => new WorkScheduleRule
             {
@@ -141,8 +132,34 @@ namespace LogGate.DataAccess
                 RequiresAlcotest = r.RequiresAlcotest
             }).ToList();
 
-            if (cleanRules.Any())
+            if (cleanRules.Count != 0)
                 await context.WorkScheduleRules.AddRangeAsync(cleanRules);
+
+            await context.SaveChangesAsync();
+        }
+
+        public async Task UpdateItemsNotesAsync(IEnumerable<DataItem> items)
+        {
+            var notesMap = items
+                .Where(x => x.Id > 0)
+                .ToDictionary(x => x.Id, x => x.Note);
+
+            if (notesMap.Count == 0) return;
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var ids = notesMap.Keys.ToList();
+
+            var entities = await context.DataItems
+                .Where(x => ids.Contains(x.Id))
+                .ToListAsync();
+
+            foreach (var entity in entities)
+            {
+                if (notesMap.TryGetValue(entity.Id, out var newNote))
+                {
+                    entity.Note = newNote;
+                }
+            }
 
             await context.SaveChangesAsync();
         }

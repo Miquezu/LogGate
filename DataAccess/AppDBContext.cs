@@ -1,4 +1,4 @@
-﻿using LogGate.Models;
+using LogGate.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace LogGate.DataAccess
@@ -19,6 +19,12 @@ namespace LogGate.DataAccess
 
             modelBuilder.Entity<DataItem>()
                 .HasIndex(x => new { x.RecordNumber, x.EventTime });
+
+            modelBuilder.Entity<DataItem>()
+                .HasIndex(x => x.EventTime);
+
+            modelBuilder.Entity<DataItem>()
+                .HasIndex(x => new { x.FullName, x.EventTime });
         }
     }
 }

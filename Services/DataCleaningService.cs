@@ -1,4 +1,4 @@
-﻿using LogGate.Interfaces;
+using LogGate.Interfaces;
 using LogGate.Models;
 using System;
 using System.Collections.Generic;
@@ -34,6 +34,7 @@ namespace LogGate.Services
             foreach (var group in grouped)
             {
                 var logs = group.OrderBy(x => x.EventTime).ToList();
+                var employeeCleaned = new List<DataItem>();
 
                 for (int i = 0; i < logs.Count; i++)
                 {
@@ -48,19 +49,18 @@ namespace LogGate.Services
                         current.SystemNote = NoteTechCard;
                     }
 
-                    if (cleaned.Count > 0 && cleaned.Last().FullName == current.FullName)
+                    if (employeeCleaned.Count > 0)
                     {
-                        var previous = cleaned.Last();
+                        var previous = employeeCleaned.Last();
                         TimeSpan diff = current.EventTime!.Value - previous.EventTime!.Value;
 
-                        // 1. Устранение аппаратного дребезга (< 2 минут) со слиянием замеров
                         if (diff.TotalMinutes < 2)
                         {
                             if (previous.Direction != current.Direction)
                             {
                                 MergeMeasurements(current, previous);
-                                cleaned.RemoveAt(cleaned.Count - 1);
-                                cleaned.Add(current);
+                                employeeCleaned.RemoveAt(employeeCleaned.Count - 1);
+                                employeeCleaned.Add(current);
                                 continue;
                             }
                             else
@@ -74,14 +74,13 @@ namespace LogGate.Services
                                 if (string.Equals(current.Direction, DirectionOut, StringComparison.OrdinalIgnoreCase))
                                 {
                                     MergeMeasurements(current, previous);
-                                    cleaned.RemoveAt(cleaned.Count - 1);
-                                    cleaned.Add(current);
+                                    employeeCleaned.RemoveAt(employeeCleaned.Count - 1);
+                                    employeeCleaned.Add(current);
                                     continue;
                                 }
                             }
                         }
 
-                        // 2. Автоисправление направлений (только для обычного персонала с дневными сменами)
                         bool isFirstEventToday = previous.EventTime!.Value.Date != current.EventTime!.Value.Date;
                         int hour = current.EventTime.Value.Hour;
 
@@ -102,7 +101,6 @@ namespace LogGate.Services
                             }
                         }
 
-                        // 3. Фиксация разрыва последовательности при совпадении направлений
                         if (previous.Direction == current.Direction)
                         {
                             current.SystemNote = NoteMissingPass;
@@ -110,7 +108,7 @@ namespace LogGate.Services
                     }
                     else
                     {
-                        // Первая запись сотрудника в выборке
+                        // Первая запись конкретного сотрудника
                         if (!isSecurity && !isTechnicalCard &&
                             string.Equals(current.Direction, DirectionOut, StringComparison.OrdinalIgnoreCase) &&
                             current.EventTime!.Value.Hour < 12)
@@ -120,8 +118,10 @@ namespace LogGate.Services
                         }
                     }
 
-                    cleaned.Add(current);
+                    employeeCleaned.Add(current);
                 }
+
+                cleaned.AddRange(employeeCleaned);
             }
 
             cleaned.AddRange(invalidItems);

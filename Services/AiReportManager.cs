@@ -174,8 +174,6 @@ namespace LogGate.Services
                 _aiService);
 
             _dialogService.OpenAiChat(chatViewModel);
-
-            _dialogService.OpenAiChat(chatViewModel);
         }
     }
 }

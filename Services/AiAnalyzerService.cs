@@ -1,77 +1,79 @@
-﻿using LogGate.Interfaces;
+using LogGate.Interfaces;
 using Microsoft.Extensions.Configuration;
 using OpenAI;
 using OpenAI.Chat;
-using System;
 using System.ClientModel;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 
-namespace LogGate.Services
+namespace LogGate.Services;
+
+public class AiAnalyzerService : IAiAnalyzerService
 {
-    public class AiAnalyzerService : IAiAnalyzerService
+    private readonly ChatClient? _chatClient;
+
+    public AiAnalyzerService(IConfiguration configuration)
     {
-        private readonly ChatClient _chatClient;
+        string? apiKey = configuration["OpenRouter:ApiKey"];
 
-        public AiAnalyzerService(IConfiguration configuration)
+        if (string.IsNullOrWhiteSpace(apiKey))
         {
-            string? apiKey = configuration["OpenRouter:ApiKey"];
-
-            if (string.IsNullOrWhiteSpace(apiKey))
-            {
-                apiKey = Environment.GetEnvironmentVariable("OPENROUTER_API_KEY", EnvironmentVariableTarget.User)
-                      ?? Environment.GetEnvironmentVariable("OPENROUTER_API_KEY", EnvironmentVariableTarget.Process)
-                      ?? Environment.GetEnvironmentVariable("OPENROUTER_API_KEY", EnvironmentVariableTarget.Machine);
-            }
-
-            if (string.IsNullOrWhiteSpace(apiKey))
-            {
-                throw new InvalidOperationException("API-ключ OpenRouter не найден ни в appsettings.json, ни в переменных среды Windows (OPENROUTER_API_KEY).");
-            }
-
-            string endpoint = configuration["OpenRouter:Endpoint"] ?? "https://openrouter.ai/api/v1";
-            string modelName = configuration["OpenRouter:Model"] ?? "openrouter/auto";
-
-            int timeoutMinutes = 3;
-            if (int.TryParse(configuration["OpenRouter:TimeoutMinutes"], out int parsedTimeout))
-            {
-                timeoutMinutes = parsedTimeout;
-            }
-
-            var options = new OpenAIClientOptions
-            {
-                Endpoint = new Uri(endpoint),
-                NetworkTimeout = TimeSpan.FromMinutes(timeoutMinutes)
-            };
-
-            _chatClient = new ChatClient(modelName, new ApiKeyCredential(apiKey), options);
+            apiKey = Environment.GetEnvironmentVariable("OPENROUTER_API_KEY", EnvironmentVariableTarget.User)
+                  ?? Environment.GetEnvironmentVariable("OPENROUTER_API_KEY", EnvironmentVariableTarget.Process)
+                  ?? Environment.GetEnvironmentVariable("OPENROUTER_API_KEY", EnvironmentVariableTarget.Machine);
         }
 
-        public async Task<string> SendMessageAsync(List<ChatMessage> conversationHistory, CancellationToken cancellationToken = default)
+        if (string.IsNullOrWhiteSpace(apiKey))
         {
-            try
-            {
-                ChatCompletion completion = await _chatClient.CompleteChatAsync(
-                    conversationHistory,
-                    cancellationToken: cancellationToken
-                );
+            // Не выбрасываем исключение при старте приложения, чтобы не ломать запуск без настроенного ИИ
+            _chatClient = null;
+            return;
+        }
 
-                if (completion?.Content != null && completion.Content.Count > 0)
-                {
-                    return completion.Content[0].Text;
-                }
+        string endpoint = configuration["OpenRouter:Endpoint"] ?? "https://openrouter.ai/api/v1";
+        string modelName = configuration["OpenRouter:Model"] ?? "openrouter/auto";
 
-                return "Нейросеть вернула пустой ответ.";
-            }
-            catch (OperationCanceledException)
+        int timeoutMinutes = 3;
+        if (int.TryParse(configuration["OpenRouter:TimeoutMinutes"], out int parsedTimeout))
+        {
+            timeoutMinutes = parsedTimeout;
+        }
+
+        var options = new OpenAIClientOptions
+        {
+            Endpoint = new Uri(endpoint),
+            NetworkTimeout = TimeSpan.FromMinutes(timeoutMinutes)
+        };
+
+        _chatClient = new ChatClient(modelName, new ApiKeyCredential(apiKey), options);
+    }
+
+    public async Task<string> SendMessageAsync(List<ChatMessage> conversationHistory, CancellationToken cancellationToken = default)
+    {
+        if (_chatClient is null)
+        {
+            return "API-ключ OpenRouter не найден ни в appsettings.json, ни в переменных среды Windows (OPENROUTER_API_KEY). Пожалуйста, укажите ключ для работы с ИИ-отчетами.";
+        }
+
+        try
+        {
+            ChatCompletion completion = await _chatClient.CompleteChatAsync(
+                conversationHistory,
+                cancellationToken: cancellationToken
+            );
+
+            if (completion?.Content is { Count: > 0 } content)
             {
-                return "Запрос к ИИ был отменен пользователем.";
+                return content[0].Text;
             }
-            catch (Exception ex)
-            {
-                return $"Ошибка обращения к API: {ex.Message}";
-            }
+
+            return "Нейросеть вернула пустой ответ.";
+        }
+        catch (OperationCanceledException)
+        {
+            return "Запрос к ИИ был отменен пользователем.";
+        }
+        catch (Exception ex)
+        {
+            return $"Ошибка обращения к API: {ex.Message}";
         }
     }
 }
