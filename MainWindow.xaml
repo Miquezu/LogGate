@@ -194,14 +194,14 @@
         <DataGrid
             x:Name="LogsDataGrid"
             Grid.Row="1"
-            AlternatingRowBackground="#FFF0F0F0"
+            AlternatingRowBackground="#FAFAFA"
             AutoGenerateColumns="False"
             CanUserAddRows="False"
             CanUserDeleteRows="False"
             HeadersVisibility="All"
             IsReadOnly="False"
             ItemsSource="{Binding DataItems}"
-            RowHeight="33"
+            RowHeight="36"
             SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
             Sorting="LogsDataGrid_Sorting"
             EnableColumnVirtualization="True"
@@ -211,118 +211,353 @@
             ScrollViewer.CanContentScroll="True"
             Visibility="{Binding IsDashboardView, Converter={StaticResource InverseBoolToVis}}">
 
-            <DataGrid.RowStyle>
-                <Style BasedOn="{StaticResource MaterialDesignDataGridRow}" TargetType="DataGridRow">
-                    <Setter Property="Background" Value="{Binding Converter={StaticResource AnomalyColorConverter}}" />
-                </Style>
-            </DataGrid.RowStyle>
-
             <DataGrid.InputBindings>
                 <MouseBinding Command="{Binding OpenEmployeeCardCommand}" Gesture="LeftDoubleClick" />
             </DataGrid.InputBindings>
 
             <DataGrid.Columns>
+                <!-- Дата -->
                 <DataGridTextColumn
                     Width="SizeToCells"
                     Binding="{Binding EventTime, StringFormat=\{0:dd.MM.yy\}}"
                     Header="Дата"
                     IsReadOnly="True"
                     SortMemberPath="EventTime" />
-                <DataGridTextColumn
-                    Width="SizeToCells"
-                    Binding="{Binding EventTime, StringFormat=\{0:HH:mm:ss\}}"
-                    Header="Время"
-                    IsReadOnly="True"
-                    SortMemberPath="EventTime">
-                    <DataGridTextColumn.CellStyle>
-                        <Style BasedOn="{StaticResource MaterialDesignDataGridCell}" TargetType="DataGridCell">
-                            <Setter Property="Background" Value="{Binding Converter={StaticResource AnomalyColorConverter}, ConverterParameter=Time}" />
-                        </Style>
-                    </DataGridTextColumn.CellStyle>
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Padding" Value="5,2" />
-                            <Setter Property="VerticalAlignment" Value="Center" />
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
-                <DataGridTextColumn
-                    Width="SizeToCells"
-                    Binding="{Binding Direction}"
-                    Header="Вх./выход"
-                    IsReadOnly="True"
-                    SortMemberPath="Direction" />
+
+                <!-- Время (со статусным бейджем опоздания / раннего ухода) -->
+                <DataGridTemplateColumn Width="95" Header="Время" SortMemberPath="EventTime">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Border
+                                Padding="5,2"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Center"
+                                CornerRadius="6">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="Transparent" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsLate}" Value="True">
+                                                <Setter Property="Background" Value="#FFF3E0" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsEarlyDeparture}" Value="True">
+                                                <Setter Property="Background" Value="#FFEBEE" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon
+                                        Width="13"
+                                        Height="13"
+                                        Margin="0,0,3,0"
+                                        VerticalAlignment="Center">
+                                        <materialDesign:PackIcon.Style>
+                                            <Style TargetType="materialDesign:PackIcon">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsLate}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                        <Setter Property="Kind" Value="ClockAlertOutline" />
+                                                        <Setter Property="Foreground" Value="#E65100" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding IsEarlyDeparture}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                        <Setter Property="Kind" Value="RunFast" />
+                                                        <Setter Property="Foreground" Value="#C62828" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </materialDesign:PackIcon.Style>
+                                    </materialDesign:PackIcon>
+                                    <TextBlock
+                                        VerticalAlignment="Center"
+                                        FontSize="12"
+                                        Text="{Binding EventTime, StringFormat=\{0:HH:mm:ss\}}">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground" Value="#212121" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsLate}" Value="True">
+                                                        <Setter Property="Foreground" Value="#E65100" />
+                                                        <Setter Property="FontWeight" Value="SemiBold" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding IsEarlyDeparture}" Value="True">
+                                                        <Setter Property="Foreground" Value="#C62828" />
+                                                        <Setter Property="FontWeight" Value="SemiBold" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <!-- Вход / Выход (стильный чип с иконкой) -->
+                <DataGridTemplateColumn Width="90" Header="Вх./Вых." SortMemberPath="Direction">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Border
+                                Padding="6,2"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Center"
+                                CornerRadius="8">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="#ECEFF1" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Direction}" Value="Вход">
+                                                <Setter Property="Background" Value="#E8F5E9" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Direction}" Value="Выход">
+                                                <Setter Property="Background" Value="#EDE7F6" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon
+                                        Width="12"
+                                        Height="12"
+                                        Margin="0,0,3,0"
+                                        VerticalAlignment="Center">
+                                        <materialDesign:PackIcon.Style>
+                                            <Style TargetType="materialDesign:PackIcon">
+                                                <Setter Property="Kind" Value="ArrowRight" />
+                                                <Setter Property="Foreground" Value="#546E7A" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Direction}" Value="Вход">
+                                                        <Setter Property="Kind" Value="Login" />
+                                                        <Setter Property="Foreground" Value="#2E7D32" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Direction}" Value="Выход">
+                                                        <Setter Property="Kind" Value="Logout" />
+                                                        <Setter Property="Foreground" Value="#5E35B1" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </materialDesign:PackIcon.Style>
+                                    </materialDesign:PackIcon>
+                                    <TextBlock
+                                        VerticalAlignment="Center"
+                                        FontSize="11"
+                                        FontWeight="SemiBold">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text" Value="{Binding Direction}" />
+                                                <Setter Property="Foreground" Value="#546E7A" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Direction}" Value="Вход">
+                                                        <Setter Property="Foreground" Value="#2E7D32" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Direction}" Value="Выход">
+                                                        <Setter Property="Foreground" Value="#5E35B1" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <!-- Время 🌡️ -->
                 <DataGridTextColumn
                     Width="SizeToCells"
                     Binding="{Binding TemperatureTime, StringFormat=\{0:HH:mm:ss\}}"
                     Header="Время 🌡️"
                     IsReadOnly="True"
                     SortMemberPath="TemperatureTime" />
-                <DataGridTextColumn
-                    Width="SizeToCells"
-                    Binding="{Binding Temperature}"
-                    Header="🌡️ °C"
-                    IsReadOnly="True"
-                    SortMemberPath="Temperature">
-                    <DataGridTextColumn.CellStyle>
-                        <Style BasedOn="{StaticResource MaterialDesignDataGridCell}" TargetType="DataGridCell">
-                            <Setter Property="Background" Value="{Binding Converter={StaticResource AnomalyColorConverter}, ConverterParameter=Temp}" />
-                        </Style>
-                    </DataGridTextColumn.CellStyle>
-                </DataGridTextColumn>
+
+                <!-- Температура (со статусным бейджем) -->
+                <DataGridTemplateColumn Width="85" Header="🌡️ °C" SortMemberPath="Temperature">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Border
+                                Padding="5,2"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Center"
+                                CornerRadius="6">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="Transparent" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding HasFever}" Value="True">
+                                                <Setter Property="Background" Value="#FFEBEE" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon
+                                        Width="12"
+                                        Height="12"
+                                        Margin="0,0,2,0"
+                                        VerticalAlignment="Center">
+                                        <materialDesign:PackIcon.Style>
+                                            <Style TargetType="materialDesign:PackIcon">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasFever}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                        <Setter Property="Kind" Value="ThermometerAlert" />
+                                                        <Setter Property="Foreground" Value="#C62828" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </materialDesign:PackIcon.Style>
+                                    </materialDesign:PackIcon>
+                                    <TextBlock
+                                        VerticalAlignment="Center"
+                                        FontSize="11"
+                                        Text="{Binding Temperature, StringFormat=\{0:F1\}, TargetNullValue='—'}">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground" Value="#424242" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasFever}" Value="True">
+                                                        <Setter Property="Foreground" Value="#C62828" />
+                                                        <Setter Property="FontWeight" Value="Bold" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <!-- Время алко. -->
                 <DataGridTextColumn
                     Width="100"
                     Binding="{Binding AlcotestTime, StringFormat=\{0:dd.MM.yy HH:mm:ss\}}"
                     Header="Время алко."
                     IsReadOnly="True"
                     SortMemberPath="AlcotestTime" />
-                <DataGridTextColumn
-                    Width="SizeToCells"
-                    Binding="{Binding AlcotestResult}"
-                    Header="Результат алко."
-                    IsReadOnly="True"
-                    SortMemberPath="AlcotestResult">
-                    <DataGridTextColumn.CellStyle>
-                        <Style BasedOn="{StaticResource MaterialDesignDataGridCell}" TargetType="DataGridCell">
-                            <Setter Property="Background" Value="{Binding Converter={StaticResource AnomalyColorConverter}, ConverterParameter=Alco}" />
-                        </Style>
-                    </DataGridTextColumn.CellStyle>
-                </DataGridTextColumn>
+
+                <!-- Результат алко. (со статусным бейджем) -->
+                <DataGridTemplateColumn Width="95" Header="Алкотест" SortMemberPath="AlcotestResult">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Border
+                                Padding="5,2"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Center"
+                                CornerRadius="6">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="Transparent" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding HasAlcotestViolation}" Value="True">
+                                                <Setter Property="Background" Value="#FFCDD2" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon
+                                        Width="12"
+                                        Height="12"
+                                        Margin="0,0,2,0"
+                                        VerticalAlignment="Center">
+                                        <materialDesign:PackIcon.Style>
+                                            <Style TargetType="materialDesign:PackIcon">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasAlcotestViolation}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                        <Setter Property="Kind" Value="AlertOctagon" />
+                                                        <Setter Property="Foreground" Value="#B71C1C" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </materialDesign:PackIcon.Style>
+                                    </materialDesign:PackIcon>
+                                    <TextBlock
+                                        VerticalAlignment="Center"
+                                        FontSize="11"
+                                        Text="{Binding AlcotestResult, StringFormat=\{0:F2\} ‰, TargetNullValue='—'}">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground" Value="#2E7D32" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasAlcotestViolation}" Value="True">
+                                                        <Setter Property="Foreground" Value="#B71C1C" />
+                                                        <Setter Property="FontWeight" Value="Bold" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <!-- ФИО -->
                 <DataGridTextColumn
                     Width="SizeToCells"
                     Binding="{Binding FullName}"
                     Header="ФИО"
                     IsReadOnly="True"
-                    SortMemberPath="FullName" />
+                    SortMemberPath="FullName">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="FontWeight" Value="Medium" />
+                            <Setter Property="VerticalAlignment" Value="Center" />
+                            <Setter Property="Padding" Value="4,0" />
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+
+                <!-- Должность -->
                 <DataGridTextColumn
-                    Width="200"
+                    Width="180"
                     Binding="{Binding Position}"
                     Header="Должность"
                     IsReadOnly="True"
                     SortMemberPath="Position" />
+
+                <!-- Подразделение -->
                 <DataGridTextColumn
-                    Width="150"
+                    Width="140"
                     Binding="{Binding Department}"
                     Header="Подразделение"
                     IsReadOnly="True"
                     SortMemberPath="Department" />
+
+                <!-- Таб. № -->
                 <DataGridTextColumn
                     Width="SizeToCells"
                     Binding="{Binding EmployeeNumber}"
                     Header="Таб. №"
                     IsReadOnly="True"
                     SortMemberPath="EmployeeNumber" />
+
+                <!-- Пропуск -->
                 <DataGridTextColumn
                     Width="SizeToCells"
                     Binding="{Binding PassNumber}"
                     Header="Пропуск"
                     IsReadOnly="True"
                     SortMemberPath="PassNumber" />
+
+                <!-- Системный статус -->
                 <DataGridTextColumn
                     Width="Auto"
                     Binding="{Binding SystemNote}"
                     Header="Системный статус"
                     IsReadOnly="True" />
+
+                <!-- Примечание -->
                 <DataGridTextColumn
                     Width="Auto"
                     Binding="{Binding Note, UpdateSourceTrigger=PropertyChanged}"

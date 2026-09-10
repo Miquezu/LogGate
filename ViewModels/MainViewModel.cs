@@ -563,7 +563,7 @@ public partial class MainViewModel : ObservableObject
         if (SelectedItem == null || string.IsNullOrEmpty(SelectedItem.FullName))
             return;
 
-        var cardViewModel = new EmployeeCardViewModel(SelectedItem.FullName, _dataRepository);
+        var cardViewModel = new EmployeeCardViewModel(SelectedItem.FullName, _dataRepository, _scheduleService);
         _dialogService.OpenEmployeeCard(cardViewModel);
     }
 

@@ -1,63 +1,730 @@
-﻿<Window
+<Window
     x:Class="LogGate.EmployeeCardWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:converters="clr-namespace:LogGate.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:local="clr-namespace:LogGate"
+    xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     Title="{Binding WindowTitle}"
-    Width="800"
-    Height="450"
+    Width="1020"
+    Height="720"
+    MinWidth="880"
+    MinHeight="600"
+    Background="#F5F6F8"
+    Style="{StaticResource MaterialDesignWindow}"
+    WindowStartupLocation="CenterOwner"
     mc:Ignorable="d">
+
     <Window.Resources>
-        <converters:AnomalyColorConverter x:Key="AnomalyColorConverter" />
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+        <converters:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis" />
     </Window.Resources>
-    <Grid Margin="10">
+
+    <Grid Margin="16">
         <Grid.RowDefinitions>
+            <!-- 1. Шапка профиля сотрудника -->
             <RowDefinition Height="Auto" />
+            <!-- 2. KPI карточки дисциплины -->
+            <RowDefinition Height="Auto" />
+            <!-- 3. Таблица истории проходов -->
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!--  Шапка со статистикой  -->
-        <StackPanel
+        <!-- 1. ШАПКА ПРОФИЛЯ СОТРУДНИКА -->
+        <materialDesign:Card
             Grid.Row="0"
-            Margin="0,0,0,10"
-            Orientation="Horizontal">
-            <TextBlock FontWeight="Bold" Text="Всего записей в базе: " />
-            <TextBlock Text="{Binding TotalRecords}" />
-        </StackPanel>
+            Padding="18,14"
+            materialDesign:ElevationAssist.Elevation="Dp2"
+            Background="{DynamicResource MaterialDesignPaper}"
+            UniformCornerRadius="10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <!-- Аватар -->
+                    <ColumnDefinition Width="Auto" />
+                    <!-- Основная информация -->
+                    <ColumnDefinition Width="*" />
+                    <!-- Индикатор нахождения -->
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
 
-        <!--  Таблица проходов конкретного сотрудника  -->
-        <DataGrid
-            Grid.Row="1"
-            AutoGenerateColumns="False"
-            IsReadOnly="True"
-            ItemsSource="{Binding EmployeeHistory}">
-            <DataGrid.Columns>
-                <DataGridTextColumn Binding="{Binding EventTime, StringFormat=\{0:dd.MM.yyyy HH:mm:ss\}}" Header="Дата и Время">
-                    <DataGridTextColumn.CellStyle>
-                        <Style BasedOn="{StaticResource MaterialDesignDataGridCell}" TargetType="DataGridCell">
-                            <Setter Property="Background" Value="{Binding Converter={StaticResource AnomalyColorConverter}, ConverterParameter=Time}" />
+                <!-- Аватар с инициалами -->
+                <Border
+                    Grid.Column="0"
+                    Width="64"
+                    Height="64"
+                    Margin="0,0,16,0"
+                    Background="#1E88E5"
+                    CornerRadius="32"
+                    materialDesign:ElevationAssist.Elevation="Dp1">
+                    <TextBlock
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        FontSize="22"
+                        FontWeight="Bold"
+                        Foreground="White"
+                        Text="{Binding Initials}" />
+                </Border>
+
+                <!-- ФИО и метаданные -->
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock
+                        FontSize="20"
+                        FontWeight="Bold"
+                        Foreground="#212121"
+                        Text="{Binding FullName}" />
+
+                    <!-- Чипы метаданных -->
+                    <WrapPanel Margin="0,8,0,0">
+                        <!-- Отдел -->
+                        <Border
+                            Margin="0,0,8,4"
+                            Padding="8,3"
+                            Background="#EDE7F6"
+                            CornerRadius="12">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon
+                                    Width="16"
+                                    Height="16"
+                                    Margin="0,0,4,0"
+                                    VerticalAlignment="Center"
+                                    Foreground="#5E35B1"
+                                    Kind="Domain" />
+                                <TextBlock
+                                    VerticalAlignment="Center"
+                                    FontSize="11"
+                                    FontWeight="SemiBold"
+                                    Foreground="#5E35B1"
+                                    Text="{Binding Department}" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Должность -->
+                        <Border
+                            Margin="0,0,8,4"
+                            Padding="8,3"
+                            Background="#E3F2FD"
+                            CornerRadius="12">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon
+                                    Width="16"
+                                    Height="16"
+                                    Margin="0,0,4,0"
+                                    VerticalAlignment="Center"
+                                    Foreground="#1565C0"
+                                    Kind="BadgeAccountHorizontalOutline" />
+                                <TextBlock
+                                    VerticalAlignment="Center"
+                                    FontSize="11"
+                                    FontWeight="SemiBold"
+                                    Foreground="#1565C0"
+                                    Text="{Binding Position}" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Табельный номер -->
+                        <Border
+                            Margin="0,0,8,4"
+                            Padding="8,3"
+                            Background="#ECEFF1"
+                            CornerRadius="12">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon
+                                    Width="16"
+                                    Height="16"
+                                    Margin="0,0,4,0"
+                                    VerticalAlignment="Center"
+                                    Foreground="#455A64"
+                                    Kind="CardAccountDetailsOutline" />
+                                <TextBlock
+                                    VerticalAlignment="Center"
+                                    FontSize="11"
+                                    FontWeight="SemiBold"
+                                    Foreground="#455A64"
+                                    Text="{Binding EmployeeNumber, StringFormat='Таб. №: {0}'}" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Пропуск -->
+                        <Border
+                            Margin="0,0,8,4"
+                            Padding="8,3"
+                            Background="#FFF8E1"
+                            CornerRadius="12">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon
+                                    Width="16"
+                                    Height="16"
+                                    Margin="0,0,4,0"
+                                    VerticalAlignment="Center"
+                                    Foreground="#F57F17"
+                                    Kind="KeyVariant" />
+                                <TextBlock
+                                    VerticalAlignment="Center"
+                                    FontSize="11"
+                                    FontWeight="SemiBold"
+                                    Foreground="#F57F17"
+                                    Text="{Binding PassNumber, StringFormat='Пропуск: {0}'}" />
+                            </StackPanel>
+                        </Border>
+                    </WrapPanel>
+                </StackPanel>
+
+                <!-- Статус нахождения (На объекте / Вне объекта) -->
+                <Border
+                    Grid.Column="2"
+                    Padding="14,10"
+                    VerticalAlignment="Center"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Background" Value="#ECEFF1" />
+                            <Setter Property="BorderBrush" Value="#CFD8DC" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsInside}" Value="True">
+                                    <Setter Property="Background" Value="#E8F5E9" />
+                                    <Setter Property="BorderBrush" Value="#A5D6A7" />
+                                </DataTrigger>
+                            </Style.Triggers>
                         </Style>
-                    </DataGridTextColumn.CellStyle>
-                </DataGridTextColumn>
-                <DataGridTextColumn Binding="{Binding Direction}" Header="Направление" />
-                <DataGridTextColumn Binding="{Binding Temperature}" Header="Температура">
-                    <DataGridTextColumn.CellStyle>
-                        <Style BasedOn="{StaticResource MaterialDesignDataGridCell}" TargetType="DataGridCell">
-                            <Setter Property="Background" Value="{Binding Converter={StaticResource AnomalyColorConverter}, ConverterParameter=Temp}" />
-                        </Style>
-                    </DataGridTextColumn.CellStyle>
-                </DataGridTextColumn>
-                <DataGridTextColumn Binding="{Binding AlcotestResult}" Header="Алкотестер">
-                    <DataGridTextColumn.CellStyle>
-                        <Style BasedOn="{StaticResource MaterialDesignDataGridCell}" TargetType="DataGridCell">
-                            <Setter Property="Background" Value="{Binding Converter={StaticResource AnomalyColorConverter}, ConverterParameter=Alco}" />
-                        </Style>
-                    </DataGridTextColumn.CellStyle>
-                </DataGridTextColumn>
-            </DataGrid.Columns>
-        </DataGrid>
+                    </Border.Style>
+                    <StackPanel HorizontalAlignment="Center">
+                        <StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
+                            <materialDesign:PackIcon
+                                Width="18"
+                                Height="18"
+                                Margin="0,0,6,0"
+                                VerticalAlignment="Center">
+                                <materialDesign:PackIcon.Style>
+                                    <Style TargetType="materialDesign:PackIcon">
+                                        <Setter Property="Kind" Value="DoorClosed" />
+                                        <Setter Property="Foreground" Value="#546E7A" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsInside}" Value="True">
+                                                <Setter Property="Kind" Value="CheckCircle" />
+                                                <Setter Property="Foreground" Value="#2E7D32" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </materialDesign:PackIcon.Style>
+                            </materialDesign:PackIcon>
+                            <TextBlock
+                                VerticalAlignment="Center"
+                                FontSize="13"
+                                FontWeight="Bold">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Text" Value="Вне объекта" />
+                                        <Setter Property="Foreground" Value="#546E7A" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsInside}" Value="True">
+                                                <Setter Property="Text" Value="На территории" />
+                                                <Setter Property="Foreground" Value="#2E7D32" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                        <TextBlock
+                            Margin="0,4,0,0"
+                            HorizontalAlignment="Center"
+                            FontSize="11"
+                            Foreground="#757575"
+                            Text="{Binding StatusDetail}" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </materialDesign:Card>
+
+        <!-- 2. KPI КАРТОЧКИ ДИСЦИПЛИНЫ И ЗДОРОВЬЯ -->
+        <Grid Grid.Row="1" Margin="0,12,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Пунктуальность -->
+            <materialDesign:Card
+                Grid.Column="0"
+                Margin="0,0,6,0"
+                Padding="12,10"
+                materialDesign:ElevationAssist.Elevation="Dp2"
+                Background="{DynamicResource MaterialDesignPaper}"
+                UniformCornerRadius="8">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock
+                            FontSize="11"
+                            FontWeight="Medium"
+                            Foreground="#757575"
+                            Text="Пунктуальность" />
+                        <TextBlock
+                            Margin="0,2,0,0"
+                            FontSize="22"
+                            FontWeight="Bold"
+                            Foreground="#2E7D32"
+                            Text="{Binding PunctualityRate}" />
+                        <TextBlock
+                            FontSize="10"
+                            Foreground="#9E9E9E"
+                            Text="соблюдение графика" />
+                    </StackPanel>
+                    <materialDesign:PackIcon
+                        Grid.Column="1"
+                        Width="32"
+                        Height="32"
+                        VerticalAlignment="Center"
+                        Foreground="#A5D6A7"
+                        Kind="CheckDecagramOutline" />
+                </Grid>
+            </materialDesign:Card>
+
+            <!-- Опоздания -->
+            <materialDesign:Card
+                Grid.Column="1"
+                Margin="6,0,6,0"
+                Padding="12,10"
+                materialDesign:ElevationAssist.Elevation="Dp2"
+                Background="{DynamicResource MaterialDesignPaper}"
+                UniformCornerRadius="8">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock
+                            FontSize="11"
+                            FontWeight="Medium"
+                            Foreground="#757575"
+                            Text="Опозданий" />
+                        <TextBlock
+                            Margin="0,2,0,0"
+                            FontSize="22"
+                            FontWeight="Bold"
+                            Foreground="#FB8C00"
+                            Text="{Binding LateCount}" />
+                        <TextBlock
+                            FontSize="10"
+                            Foreground="#9E9E9E"
+                            Text="зафиксировано" />
+                    </StackPanel>
+                    <materialDesign:PackIcon
+                        Grid.Column="1"
+                        Width="32"
+                        Height="32"
+                        VerticalAlignment="Center"
+                        Foreground="#FFE082"
+                        Kind="ClockAlertOutline" />
+                </Grid>
+            </materialDesign:Card>
+
+            <!-- Ранние уходы -->
+            <materialDesign:Card
+                Grid.Column="2"
+                Margin="6,0,6,0"
+                Padding="12,10"
+                materialDesign:ElevationAssist.Elevation="Dp2"
+                Background="{DynamicResource MaterialDesignPaper}"
+                UniformCornerRadius="8">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock
+                            FontSize="11"
+                            FontWeight="Medium"
+                            Foreground="#757575"
+                            Text="Ранних уходов" />
+                        <TextBlock
+                            Margin="0,2,0,0"
+                            FontSize="22"
+                            FontWeight="Bold"
+                            Foreground="#E53935"
+                            Text="{Binding EarlyCount}" />
+                        <TextBlock
+                            FontSize="10"
+                            Foreground="#9E9E9E"
+                            Text="уходов до конца дня" />
+                    </StackPanel>
+                    <materialDesign:PackIcon
+                        Grid.Column="1"
+                        Width="32"
+                        Height="32"
+                        VerticalAlignment="Center"
+                        Foreground="#EF9A9A"
+                        Kind="RunFast" />
+                </Grid>
+            </materialDesign:Card>
+
+            <!-- Средняя температура / Алкотест -->
+            <materialDesign:Card
+                Grid.Column="3"
+                Margin="6,0,0,0"
+                Padding="12,10"
+                materialDesign:ElevationAssist.Elevation="Dp2"
+                Background="{DynamicResource MaterialDesignPaper}"
+                UniformCornerRadius="8">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock
+                            FontSize="11"
+                            FontWeight="Medium"
+                            Foreground="#757575"
+                            Text="Ср. температура" />
+                        <TextBlock
+                            Margin="0,2,0,0"
+                            FontSize="22"
+                            FontWeight="Bold"
+                            Foreground="#1E88E5"
+                            Text="{Binding AverageTemperature}" />
+                        <TextBlock
+                            FontSize="10"
+                            Foreground="#9E9E9E"
+                            Text="{Binding AlcotestViolationsCount, StringFormat='Алко: {0} наруш.'}" />
+                    </StackPanel>
+                    <materialDesign:PackIcon
+                        Grid.Column="1"
+                        Width="32"
+                        Height="32"
+                        VerticalAlignment="Center"
+                        Foreground="#90CAF9"
+                        Kind="Thermometer" />
+                </Grid>
+            </materialDesign:Card>
+        </Grid>
+
+        <!-- 3. ТАБЛИЦА ИСТОРИИ СОБЫТИЙ -->
+        <materialDesign:Card
+            Grid.Row="2"
+            Padding="14,12"
+            materialDesign:ElevationAssist.Elevation="Dp2"
+            Background="{DynamicResource MaterialDesignPaper}"
+            UniformCornerRadius="10">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <!-- Заголовок таблицы -->
+                <Grid Grid.Row="0" Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <materialDesign:PackIcon
+                            Width="20"
+                            Height="20"
+                            Margin="0,0,8,0"
+                            VerticalAlignment="Center"
+                            Foreground="#5E35B1"
+                            Kind="History" />
+                        <TextBlock
+                            VerticalAlignment="Center"
+                            FontSize="15"
+                            FontWeight="Bold"
+                            Foreground="#212121"
+                            Text="История проходов и проверок" />
+                    </StackPanel>
+
+                    <!-- Чип количества записей -->
+                    <Border
+                        Grid.Column="1"
+                        Padding="10,4"
+                        Background="#EDE7F6"
+                        CornerRadius="12">
+                        <TextBlock
+                            FontSize="11"
+                            FontWeight="SemiBold"
+                            Foreground="#5E35B1"
+                            Text="{Binding TotalRecords, StringFormat='Всего записей: {0}'}" />
+                    </Border>
+                </Grid>
+
+                <!-- Таблица проходов -->
+                <DataGrid
+                    Grid.Row="1"
+                    AlternatingRowBackground="#FAFAFA"
+                    AutoGenerateColumns="False"
+                    CanUserAddRows="False"
+                    CanUserDeleteRows="False"
+                    EnableColumnVirtualization="True"
+                    EnableRowVirtualization="True"
+                    HeadersVisibility="All"
+                    IsReadOnly="True"
+                    ItemsSource="{Binding EmployeeHistory}"
+                    RowHeight="34"
+                    ScrollViewer.CanContentScroll="True"
+                    VirtualizingPanel.IsVirtualizing="True"
+                    VirtualizingPanel.VirtualizationMode="Recycling">
+
+                    <DataGrid.Columns>
+                        <!-- Дата и Время -->
+                        <DataGridTextColumn
+                            Width="160"
+                            Binding="{Binding EventTime, StringFormat=\{0:dd.MM.yyyy HH:mm:ss\}}"
+                            Header="Дата и Время"
+                            SortMemberPath="EventTime" />
+
+                        <!-- Направление (Бейдж) -->
+                        <DataGridTemplateColumn Width="110" Header="Направление" SortMemberPath="Direction">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border
+                                        Padding="8,3"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Center"
+                                        CornerRadius="10">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="#ECEFF1" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Direction}" Value="Вход">
+                                                        <Setter Property="Background" Value="#E8F5E9" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Direction}" Value="Выход">
+                                                        <Setter Property="Background" Value="#EDE7F6" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <StackPanel Orientation="Horizontal">
+                                            <materialDesign:PackIcon
+                                                Width="14"
+                                                Height="14"
+                                                Margin="0,0,4,0"
+                                                VerticalAlignment="Center">
+                                                <materialDesign:PackIcon.Style>
+                                                    <Style TargetType="materialDesign:PackIcon">
+                                                        <Setter Property="Kind" Value="ArrowRight" />
+                                                        <Setter Property="Foreground" Value="#546E7A" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Direction}" Value="Вход">
+                                                                <Setter Property="Kind" Value="Login" />
+                                                                <Setter Property="Foreground" Value="#2E7D32" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Direction}" Value="Выход">
+                                                                <Setter Property="Kind" Value="Logout" />
+                                                                <Setter Property="Foreground" Value="#5E35B1" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </materialDesign:PackIcon.Style>
+                                            </materialDesign:PackIcon>
+                                            <TextBlock
+                                                VerticalAlignment="Center"
+                                                FontSize="11"
+                                                FontWeight="SemiBold">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Text" Value="{Binding Direction}" />
+                                                        <Setter Property="Foreground" Value="#546E7A" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Direction}" Value="Вход">
+                                                                <Setter Property="Foreground" Value="#2E7D32" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Direction}" Value="Выход">
+                                                                <Setter Property="Foreground" Value="#5E35B1" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- КПП / Пост -->
+                        <DataGridTextColumn
+                            Width="140"
+                            Binding="{Binding Post}"
+                            Header="Точка прохода" />
+
+                        <!-- Термометрия -->
+                        <DataGridTemplateColumn Width="110" Header="🌡️ Температура" SortMemberPath="Temperature">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock
+                                            VerticalAlignment="Center"
+                                            FontSize="12"
+                                            Text="{Binding Temperature, StringFormat=\{0:F1\} °C, TargetNullValue='—'}">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="#424242" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Temperature, Converter={x:Null}}" Value="{x:Null}">
+                                                            <Setter Property="Foreground" Value="#9E9E9E" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- Алкотестер -->
+                        <DataGridTemplateColumn Width="120" Header="Алкотестер" SortMemberPath="AlcotestResult">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border
+                                        Padding="6,2"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Center"
+                                        CornerRadius="8">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="Transparent" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding AlcotestResult, TargetNullValue=0}" Value="0">
+                                                        <Setter Property="Background" Value="#E8F5E9" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <TextBlock
+                                            VerticalAlignment="Center"
+                                            FontSize="11"
+                                            FontWeight="SemiBold"
+                                            Text="{Binding AlcotestResult, StringFormat=\{0:F2\} ‰, TargetNullValue='Не проводился'}">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="#757575" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding AlcotestResult, TargetNullValue=0}" Value="0">
+                                                            <Setter Property="Foreground" Value="#2E7D32" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- Дисциплина (Опоздание / Ранний уход / Норма) -->
+                        <DataGridTemplateColumn Width="150" Header="Статус дисциплины">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <!-- Опоздание -->
+                                        <Border
+                                            Margin="0,0,4,0"
+                                            Padding="6,2"
+                                            Background="#FFF3E0"
+                                            CornerRadius="8">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsLate}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <StackPanel Orientation="Horizontal">
+                                                <materialDesign:PackIcon
+                                                    Width="12"
+                                                    Height="12"
+                                                    Margin="0,0,3,0"
+                                                    VerticalAlignment="Center"
+                                                    Foreground="#E65100"
+                                                    Kind="ClockAlertOutline" />
+                                                <TextBlock
+                                                    FontSize="10"
+                                                    FontWeight="SemiBold"
+                                                    Foreground="#E65100"
+                                                    Text="Опоздание" />
+                                            </StackPanel>
+                                        </Border>
+
+                                        <!-- Ранний уход -->
+                                        <Border
+                                            Margin="0,0,4,0"
+                                            Padding="6,2"
+                                            Background="#FFEBEE"
+                                            CornerRadius="8">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsEarlyDeparture}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <StackPanel Orientation="Horizontal">
+                                                <materialDesign:PackIcon
+                                                    Width="12"
+                                                    Height="12"
+                                                    Margin="0,0,3,0"
+                                                    VerticalAlignment="Center"
+                                                    Foreground="#C62828"
+                                                    Kind="RunFast" />
+                                                <TextBlock
+                                                    FontSize="10"
+                                                    FontWeight="SemiBold"
+                                                    Foreground="#C62828"
+                                                    Text="Ранний уход" />
+                                            </StackPanel>
+                                        </Border>
+
+                                        <!-- В норме -->
+                                        <TextBlock
+                                            FontSize="11"
+                                            Foreground="#9E9E9E"
+                                            Text="В норме">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsLate}" Value="True">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding IsEarlyDeparture}" Value="True">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- Системная отметка -->
+                        <DataGridTextColumn
+                            Width="*"
+                            Binding="{Binding SystemNote}"
+                            Header="Системная отметка" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </materialDesign:Card>
     </Grid>
 </Window>

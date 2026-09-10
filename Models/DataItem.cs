@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace LogGate.Models
 {
@@ -18,6 +18,15 @@ namespace LogGate.Models
 
         [NotMapped]
         public bool IsLate { get; set; }
+
+        [NotMapped]
+        public bool HasFever => Temperature.HasValue && Temperature.Value > 37.0;
+
+        [NotMapped]
+        public bool HasAlcotestViolation => AlcotestResult.HasValue && AlcotestResult.Value > 0.0;
+
+        [NotMapped]
+        public bool HasDisciplineViolation => IsLate || IsEarlyDeparture;
 
         public string? Note { get; set; }
         public string? PassNumber { get; set; }

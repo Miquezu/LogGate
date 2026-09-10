@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using LogGate.Interfaces;
 using LogGate.Models;
 using System.Collections.ObjectModel;
@@ -8,6 +8,7 @@ namespace LogGate.ViewModels
     public partial class EmployeeCardViewModel : ObservableObject
     {
         private readonly IDataRepository _dataRepository;
+        private readonly IScheduleService? _scheduleService;
         private readonly string _employeeName;
 
         [ObservableProperty]
@@ -19,23 +20,144 @@ namespace LogGate.ViewModels
         [ObservableProperty]
         private string _windowTitle;
 
-        public EmployeeCardViewModel(string employeeName, IDataRepository dataRepository)
+        // Данные профиля сотрудника
+        [ObservableProperty]
+        private string _fullName = string.Empty;
+
+        [ObservableProperty]
+        private string _initials = "??";
+
+        [ObservableProperty]
+        private string _department = "—";
+
+        [ObservableProperty]
+        private string _position = "—";
+
+        [ObservableProperty]
+        private string _employeeNumber = "—";
+
+        [ObservableProperty]
+        private string _passNumber = "—";
+
+        // Статус нахождения на объекте
+        [ObservableProperty]
+        private bool _isInside;
+
+        [ObservableProperty]
+        private string _statusText = "Загрузка...";
+
+        [ObservableProperty]
+        private string _statusDetail = string.Empty;
+
+        // Дисциплинарные и медицинские KPI метрики
+        [ObservableProperty]
+        private string _punctualityRate = "100%";
+
+        [ObservableProperty]
+        private int _lateCount;
+
+        [ObservableProperty]
+        private int _earlyCount;
+
+        [ObservableProperty]
+        private string _averageTemperature = "—";
+
+        [ObservableProperty]
+        private int _alcotestCheckedCount;
+
+        [ObservableProperty]
+        private int _alcotestViolationsCount;
+
+        public EmployeeCardViewModel(string employeeName, IDataRepository dataRepository, IScheduleService? scheduleService = null)
         {
             _employeeName = employeeName;
             _dataRepository = dataRepository;
+            _scheduleService = scheduleService;
 
-            WindowTitle = $"История проходов: {_employeeName}";
+            FullName = employeeName;
+            Initials = GetInitials(employeeName);
+            WindowTitle = $"Профиль сотрудника: {_employeeName}";
 
             LoadEmployeeData();
+        }
+
+        private static string GetInitials(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return "??";
+            var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 1)
+                return parts[0].Length > 0 ? parts[0][0].ToString().ToUpperInvariant() : "??";
+            return $"{parts[0][0]}{parts[1][0]}".ToUpperInvariant();
         }
 
         private async void LoadEmployeeData()
         {
             var history = await _dataRepository.GetEmployeeHistoryAsync(_employeeName);
+
+            // Оценка соблюдения графика работы, если сервис доступен
+            _scheduleService?.EvaluateCompliance(history);
+
             TotalRecords = history.Count;
 
+            // Сортировка по убыванию времени (последние события первыми)
+            var sorted = history.OrderByDescending(x => x.EventTime).ToList();
+
+            var latest = sorted.FirstOrDefault();
+            if (latest != null)
+            {
+                Department = string.IsNullOrWhiteSpace(latest.Department) ? "Не указан" : latest.Department;
+                Position = string.IsNullOrWhiteSpace(latest.Position) ? "Сотрудник" : latest.Position;
+                EmployeeNumber = string.IsNullOrWhiteSpace(latest.EmployeeNumber) ? "—" : latest.EmployeeNumber;
+                PassNumber = string.IsNullOrWhiteSpace(latest.PassNumber) ? "—" : latest.PassNumber;
+
+                // Определение текущего статуса нахождения на территории
+                bool inside = string.Equals(latest.Direction?.Trim(), "Вход", StringComparison.OrdinalIgnoreCase);
+                IsInside = inside;
+                StatusText = inside ? "На территории предприятия" : "Вне объекта";
+                string postInfo = string.IsNullOrWhiteSpace(latest.Post) ? "" : $" ({latest.Post})";
+                StatusDetail = inside
+                    ? $"Вход: {latest.EventTime:dd.MM.yyyy HH:mm}{postInfo}"
+                    : $"Выход: {latest.EventTime:dd.MM.yyyy HH:mm}{postInfo}";
+            }
+            else
+            {
+                StatusText = "Нет записей";
+                StatusDetail = "В базе данных нет зарегистрированных событий";
+            }
+
+            // Подсчет дисциплинарных KPI
+            LateCount = sorted.Count(x => x.IsLate);
+            EarlyCount = sorted.Count(x => x.IsEarlyDeparture);
+
+            // Температура
+            var tempItems = sorted.Where(x => x.Temperature.HasValue && x.Temperature.Value > 0).ToList();
+            AverageTemperature = tempItems.Any()
+                ? $"{tempItems.Average(x => x.Temperature!.Value):F1} °C"
+                : "—";
+
+            // Алкотестер
+            var alcoItems = sorted.Where(x => x.AlcotestResult.HasValue).ToList();
+            AlcotestCheckedCount = alcoItems.Count;
+            AlcotestViolationsCount = alcoItems.Count(x => x.AlcotestResult!.Value > 0.0);
+
+            // Индекс пунктуальности (соотношение проходов без опозданий и ранних уходов к общему числу приходов/уходов)
+            int totalPunctualityChecks = sorted.Count(x =>
+                string.Equals(x.Direction, "Вход", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(x.Direction, "Выход", StringComparison.OrdinalIgnoreCase));
+
+            if (totalPunctualityChecks > 0)
+            {
+                int violations = LateCount + EarlyCount;
+                double rate = Math.Max(0, (double)(totalPunctualityChecks - violations) / totalPunctualityChecks * 100.0);
+                PunctualityRate = $"{rate:F0}%";
+            }
+            else
+            {
+                PunctualityRate = "100%";
+            }
+
             EmployeeHistory.Clear();
-            foreach (var item in history)
+            foreach (var item in sorted)
             {
                 EmployeeHistory.Add(item);
             }
