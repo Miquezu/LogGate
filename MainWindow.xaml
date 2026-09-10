@@ -7,6 +7,7 @@
     xmlns:local="clr-namespace:LogGate"
     xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:views="clr-namespace:LogGate.Views"
     Title="Учет времени — Сводка"
     Width="1200"
     Height="600"
@@ -17,6 +18,9 @@
     mc:Ignorable="d">
     <Window.Resources>
         <converters:AnomalyColorConverter x:Key="AnomalyColorConverter" />
+        <converters:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis" />
+        <converters:InverseBooleanConverter x:Key="InverseBoolConverter" />
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
     </Window.Resources>
     <Grid Margin="10">
         <Grid.RowDefinitions>
@@ -40,16 +44,42 @@
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <!--  1 УРОВЕНЬ: Поиск и Глобальные функции  -->
+                <!--  1 УРОВЕНЬ: Переключатель экранов, Поиск и Действия  -->
                 <Grid Grid.Row="0">
                     <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
+                    <!-- Переключатель: Журнал / Дашборд -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,15,0">
+                        <RadioButton
+                            Style="{StaticResource MaterialDesignTabRadioButton}"
+                            Margin="0,0,4,0"
+                            IsChecked="{Binding IsDashboardView, Converter={StaticResource InverseBoolConverter}, Mode=TwoWay}"
+                            Command="{Binding SwitchToLogsViewCommand}">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="TableLarge" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                <TextBlock Text="Журнал" VerticalAlignment="Center" FontWeight="Medium" />
+                            </StackPanel>
+                        </RadioButton>
+
+                        <RadioButton
+                            Style="{StaticResource MaterialDesignTabRadioButton}"
+                            IsChecked="{Binding IsDashboardView, Mode=TwoWay}"
+                            Command="{Binding SwitchToDashboardViewCommand}">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="ViewDashboardOutline" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                <TextBlock Text="Дашборд" VerticalAlignment="Center" FontWeight="Medium" />
+                            </StackPanel>
+                        </RadioButton>
+                    </StackPanel>
+
                     <TextBox
-                        Grid.Column="0"
-                        MaxWidth="400"
+                        Grid.Column="1"
+                        Width="320"
                         HorizontalAlignment="Left"
                         VerticalAlignment="Center"
                         materialDesign:HintAssist.Hint="Поиск по ФИО, пропуску..."
@@ -59,7 +89,7 @@
                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
 
                     <StackPanel
-                        Grid.Column="1"
+                        Grid.Column="3"
                         VerticalAlignment="Center"
                         Orientation="Horizontal">
                         <Button
@@ -178,7 +208,8 @@
             EnableRowVirtualization="True"
             VirtualizingPanel.IsVirtualizing="True"
             VirtualizingPanel.VirtualizationMode="Recycling"
-            ScrollViewer.CanContentScroll="True">
+            ScrollViewer.CanContentScroll="True"
+            Visibility="{Binding IsDashboardView, Converter={StaticResource InverseBoolToVis}}">
 
             <DataGrid.RowStyle>
                 <Style BasedOn="{StaticResource MaterialDesignDataGridRow}" TargetType="DataGridRow">
@@ -298,6 +329,7 @@
                     Header="Примечание" />
             </DataGrid.Columns>
         </DataGrid>
+        <views:DashboardView Grid.Row="1" Visibility="{Binding IsDashboardView, Converter={StaticResource BoolToVis}}" />
         <StatusBar
             Grid.Row="2"
             Padding="10,4"
@@ -334,13 +366,13 @@
                         Text="{Binding StatusMessage}" />
                 </StackPanel>
             </StatusBarItem>
-            <StatusBarItem Grid.Column="1" HorizontalAlignment="Center">
+            <StatusBarItem Grid.Column="1" HorizontalAlignment="Center" Visibility="{Binding IsDashboardView, Converter={StaticResource InverseBoolToVis}}">
                 <Button
                     Command="{Binding SaveChangesCommand}"
                     Content="💾 Сохранить изменения"
                     Style="{StaticResource MaterialDesignOutlinedButton}" />
             </StatusBarItem>
-            <StatusBarItem Grid.Column="2" HorizontalAlignment="Center">
+            <StatusBarItem Grid.Column="2" HorizontalAlignment="Center" Visibility="{Binding IsDashboardView, Converter={StaticResource InverseBoolToVis}}">
                 <StackPanel Orientation="Horizontal">
                     <!--  Кнопка Назад  -->
                     <Button

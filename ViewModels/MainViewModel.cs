@@ -1,8 +1,12 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using LiveChartsCore;
+using LiveChartsCore.SkiaSharpView;
+using LiveChartsCore.SkiaSharpView.Painting;
 using LogGate.Interfaces;
 using LogGate.Models;
 using LogGate.Services;
+using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -19,6 +23,7 @@ public partial class MainViewModel : ObservableObject
     private readonly AiReportManager _aiReportManager;
     private readonly AutoImportService _autoImportService;
     private readonly IDataCleaningService _cleaningService;
+    private readonly IDashboardService _dashboardService;
     private readonly IDataRepository _dataRepository;
     private readonly IDialogService _dialogService;
     private readonly IFileParser _fileParser;
@@ -78,6 +83,48 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private int _totalPages = 1;
 
+    // Режим отображения: Таблица или Дашборд
+    [ObservableProperty]
+    private bool _isDashboardView;
+
+    // KPI Метрики Дашборда
+    [ObservableProperty]
+    private int _kpiTotalPasses;
+
+    [ObservableProperty]
+    private int _kpiUniqueEmployees;
+
+    [ObservableProperty]
+    private int _kpiLateCount;
+
+    [ObservableProperty]
+    private int _kpiEarlyCount;
+
+    [ObservableProperty]
+    private int _kpiCriticalCount;
+
+    [ObservableProperty]
+    private string _kpiLatePercentage = "0%";
+
+    [ObservableProperty]
+    private string _kpiEarlyPercentage = "0%";
+
+    // Серии графиков LiveCharts
+    [ObservableProperty]
+    private ISeries[] _hourlyTrafficSeries = [];
+
+    [ObservableProperty]
+    private Axis[] _hourlyXAxes = [];
+
+    [ObservableProperty]
+    private ISeries[] _violationsPieSeries = [];
+
+    [ObservableProperty]
+    private ISeries[] _departmentSeries = [];
+
+    [ObservableProperty]
+    private Axis[] _departmentYAxes = [];
+
     public MainViewModel(
         IFileParser fileParser,
         IDataCleaningService cleaningService,
@@ -85,7 +132,8 @@ public partial class MainViewModel : ObservableObject
         IDialogService dialogService,
         AiReportManager aiReportManager,
         IScheduleService scheduleService,
-        AutoImportService autoImportService)
+        AutoImportService autoImportService,
+        IDashboardService dashboardService)
     {
         _fileParser = fileParser;
         _cleaningService = cleaningService;
@@ -94,6 +142,7 @@ public partial class MainViewModel : ObservableObject
         _aiReportManager = aiReportManager;
         _scheduleService = scheduleService;
         _autoImportService = autoImportService;
+        _dashboardService = dashboardService;
 
         _autoImportService.DataImported += OnAutoDataImported;
         _autoImportService.ImportError += OnAutoImportError;
@@ -112,6 +161,12 @@ public partial class MainViewModel : ObservableObject
         "Прошлый месяц",
         "Сначала года"
     ];
+
+    [RelayCommand]
+    private void SwitchToLogsView() => IsDashboardView = false;
+
+    [RelayCommand]
+    private void SwitchToDashboardView() => IsDashboardView = true;
 
     public void Cleanup()
     {
@@ -168,6 +223,8 @@ public partial class MainViewModel : ObservableObject
             if (resetPage) CurrentPage = 1;
 
             UpdatePagedView();
+            UpdateDashboard(_filteredCache);
+
             StatusMessage = "Готово.";
         }
         catch (OperationCanceledException)
@@ -177,6 +234,144 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             StatusMessage = $"Ошибка загрузки: {ex.Message}";
+        }
+    }
+
+    private void UpdateDashboard(List<DataItem> items)
+    {
+        var metrics = _dashboardService.CalculateMetrics(items);
+
+        KpiTotalPasses = metrics.TotalPasses;
+        KpiUniqueEmployees = metrics.UniqueEmployees;
+        KpiLateCount = metrics.LateCount;
+        KpiEarlyCount = metrics.EarlyCount;
+        KpiCriticalCount = metrics.AlcoPositiveCount + metrics.HighTempCount;
+
+        KpiLatePercentage = metrics.TotalPasses > 0
+            ? $"{(double)metrics.LateCount / metrics.TotalPasses * 100:F1}%"
+            : "0%";
+
+        KpiEarlyPercentage = metrics.TotalPasses > 0
+            ? $"{(double)metrics.EarlyCount / metrics.TotalPasses * 100:F1}%"
+            : "0%";
+
+        // 1. Почасовой трафик (06:00 - 22:00)
+        const int startHour = 6;
+        const int endHour = 22;
+        const int count = endHour - startHour + 1;
+
+        var inValues = new int[count];
+        var outValues = new int[count];
+        var labels = new string[count];
+
+        for (int h = startHour; h <= endHour; h++)
+        {
+            int idx = h - startHour;
+            inValues[idx] = metrics.HourlyIn[h];
+            outValues[idx] = metrics.HourlyOut[h];
+            labels[idx] = $"{h:D2}:00";
+        }
+
+        HourlyTrafficSeries =
+        [
+            new ColumnSeries<int>
+            {
+                Name = "Вход",
+                Values = inValues,
+                Fill = new SolidColorPaint(SKColor.Parse("#1976D2")),
+                Stroke = null,
+                Padding = 2
+            },
+            new ColumnSeries<int>
+            {
+                Name = "Выход",
+                Values = outValues,
+                Fill = new SolidColorPaint(SKColor.Parse("#FF9800")),
+                Stroke = null,
+                Padding = 2
+            }
+        ];
+
+        HourlyXAxes =
+        [
+            new Axis
+            {
+                Labels = labels,
+                LabelsPaint = new SolidColorPaint(SKColor.Parse("#616161")),
+                TextSize = 11
+            }
+        ];
+
+        // 2. Круговая диаграмма нарушений
+        var pieSeriesList = new List<ISeries>();
+        SKColor[] colors =
+        [
+            SKColor.Parse("#F44336"), // Red
+            SKColor.Parse("#FF9800"), // Orange
+            SKColor.Parse("#9C27B0"), // Purple
+            SKColor.Parse("#E91E63"), // Pink
+            SKColor.Parse("#3F51B5")  // Indigo
+        ];
+
+        int colorIdx = 0;
+        foreach (var cat in metrics.ViolationBreakdown)
+        {
+            if (cat.Count > 0)
+            {
+                pieSeriesList.Add(new PieSeries<int>
+                {
+                    Name = $"{cat.Category} ({cat.Count})",
+                    Values = [cat.Count],
+                    Fill = new SolidColorPaint(colors[colorIdx % colors.Length])
+                });
+                colorIdx++;
+            }
+        }
+
+        if (pieSeriesList.Count == 0)
+        {
+            pieSeriesList.Add(new PieSeries<int>
+            {
+                Name = "Нарушений не зафиксировано",
+                Values = [1],
+                Fill = new SolidColorPaint(SKColor.Parse("#4CAF50"))
+            });
+        }
+
+        ViolationsPieSeries = [.. pieSeriesList];
+
+        // 3. Топ-5 отделов по нарушениям
+        if (metrics.TopDepartments.Count > 0)
+        {
+            var depts = metrics.TopDepartments.AsEnumerable().Reverse().ToList();
+            var deptNames = depts.Select(d => d.Department).ToArray();
+            var deptCounts = depts.Select(d => d.Count).ToArray();
+
+            DepartmentSeries =
+            [
+                new RowSeries<int>
+                {
+                    Name = "Инцидентов",
+                    Values = deptCounts,
+                    Fill = new SolidColorPaint(SKColor.Parse("#E53935")),
+                    Stroke = null
+                }
+            ];
+
+            DepartmentYAxes =
+            [
+                new Axis
+                {
+                    Labels = deptNames,
+                    LabelsPaint = new SolidColorPaint(SKColor.Parse("#424242")),
+                    TextSize = 11
+                }
+            ];
+        }
+        else
+        {
+            DepartmentSeries = [];
+            DepartmentYAxes = [];
         }
     }
 

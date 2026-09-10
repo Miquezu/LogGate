@@ -48,6 +48,7 @@ namespace LogGate
                     services.AddSingleton<IScheduleService, ScheduleService>();
                     services.AddSingleton<IDataRepository, DataRepository>();
                     services.AddSingleton<AutoImportService>();
+                    services.AddSingleton<IDashboardService, DashboardService>();
                     services.AddSingleton<IAiAnalyzerService, AiAnalyzerService>();
                     services.AddTransient<AiReportManager>();
 
