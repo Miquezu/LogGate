@@ -31,15 +31,15 @@
 
         <Border
             Margin="0,0,0,10"
-            Padding="12,8"
+            Padding="14,10"
             materialDesign:ElevationAssist.Elevation="Dp2"
             Background="{DynamicResource MaterialDesignPaper}"
-            CornerRadius="8">
+            CornerRadius="10">
 
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
-                    <RowDefinition Height="12" />
+                    <RowDefinition Height="10" />
                     <!--  Отступ между уровнями  -->
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
@@ -47,147 +47,455 @@
                 <!--  1 УРОВЕНЬ: Переключатель экранов, Поиск и Действия  -->
                 <Grid Grid.Row="0">
                     <Grid.ColumnDefinitions>
+                        <!-- Переключатель экранов -->
                         <ColumnDefinition Width="Auto" />
+                        <!-- Живой поиск -->
                         <ColumnDefinition Width="Auto" />
+                        <!-- Пустое пространство -->
                         <ColumnDefinition Width="*" />
+                        <!-- Действия справа -->
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
-                    <!-- Переключатель: Журнал / Дашборд -->
-                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,15,0">
-                        <RadioButton
-                            Style="{StaticResource MaterialDesignTabRadioButton}"
-                            Margin="0,0,4,0"
-                            IsChecked="{Binding IsDashboardView, Converter={StaticResource InverseBoolConverter}, Mode=TwoWay}"
-                            Command="{Binding SwitchToLogsViewCommand}">
-                            <StackPanel Orientation="Horizontal">
-                                <materialDesign:PackIcon Kind="TableLarge" VerticalAlignment="Center" Margin="0,0,6,0" />
-                                <TextBlock Text="Журнал" VerticalAlignment="Center" FontWeight="Medium" />
-                            </StackPanel>
-                        </RadioButton>
+                    <!-- Переключатель: Журнал / Дашборд (Segmented Pill Switcher) -->
+                    <Border
+                        Grid.Column="0"
+                        Margin="0,0,16,0"
+                        Padding="3"
+                        Background="#F0F2F5"
+                        CornerRadius="8"
+                        VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton
+                                GroupName="ViewSwitcher"
+                                IsChecked="{Binding IsDashboardView, Converter={StaticResource InverseBoolConverter}, Mode=TwoWay}"
+                                Command="{Binding SwitchToLogsViewCommand}">
+                                <RadioButton.Template>
+                                    <ControlTemplate TargetType="RadioButton">
+                                        <Border
+                                            x:Name="TabBorder"
+                                            Background="Transparent"
+                                            CornerRadius="6"
+                                            Padding="14,6">
+                                            <StackPanel Orientation="Horizontal">
+                                                <materialDesign:PackIcon
+                                                    x:Name="TabIcon"
+                                                    Width="16"
+                                                    Height="16"
+                                                    Margin="0,0,6,0"
+                                                    VerticalAlignment="Center"
+                                                    Foreground="#757575"
+                                                    Kind="TableLarge" />
+                                                <TextBlock
+                                                    x:Name="TabText"
+                                                    VerticalAlignment="Center"
+                                                    FontSize="12"
+                                                    FontWeight="Medium"
+                                                    Foreground="#757575"
+                                                    Text="Журнал" />
+                                            </StackPanel>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsChecked" Value="True">
+                                                <Setter TargetName="TabBorder" Property="Background" Value="White" />
+                                                <Setter TargetName="TabBorder" Property="materialDesign:ElevationAssist.Elevation" Value="Dp1" />
+                                                <Setter TargetName="TabIcon" Property="Foreground" Value="#5E35B1" />
+                                                <Setter TargetName="TabText" Property="Foreground" Value="#5E35B1" />
+                                                <Setter TargetName="TabText" Property="FontWeight" Value="SemiBold" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </RadioButton.Template>
+                            </RadioButton>
 
-                        <RadioButton
-                            Style="{StaticResource MaterialDesignTabRadioButton}"
-                            IsChecked="{Binding IsDashboardView, Mode=TwoWay}"
-                            Command="{Binding SwitchToDashboardViewCommand}">
-                            <StackPanel Orientation="Horizontal">
-                                <materialDesign:PackIcon Kind="ViewDashboardOutline" VerticalAlignment="Center" Margin="0,0,6,0" />
-                                <TextBlock Text="Дашборд" VerticalAlignment="Center" FontWeight="Medium" />
-                            </StackPanel>
-                        </RadioButton>
-                    </StackPanel>
+                            <RadioButton
+                                GroupName="ViewSwitcher"
+                                IsChecked="{Binding IsDashboardView, Mode=TwoWay}"
+                                Command="{Binding SwitchToDashboardViewCommand}">
+                                <RadioButton.Template>
+                                    <ControlTemplate TargetType="RadioButton">
+                                        <Border
+                                            x:Name="TabBorder"
+                                            Background="Transparent"
+                                            CornerRadius="6"
+                                            Padding="14,6">
+                                            <StackPanel Orientation="Horizontal">
+                                                <materialDesign:PackIcon
+                                                    x:Name="TabIcon"
+                                                    Width="16"
+                                                    Height="16"
+                                                    Margin="0,0,6,0"
+                                                    VerticalAlignment="Center"
+                                                    Foreground="#757575"
+                                                    Kind="ViewDashboardOutline" />
+                                                <TextBlock
+                                                    x:Name="TabText"
+                                                    VerticalAlignment="Center"
+                                                    FontSize="12"
+                                                    FontWeight="Medium"
+                                                    Foreground="#757575"
+                                                    Text="Дашборд" />
+                                            </StackPanel>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsChecked" Value="True">
+                                                <Setter TargetName="TabBorder" Property="Background" Value="White" />
+                                                <Setter TargetName="TabBorder" Property="materialDesign:ElevationAssist.Elevation" Value="Dp1" />
+                                                <Setter TargetName="TabIcon" Property="Foreground" Value="#5E35B1" />
+                                                <Setter TargetName="TabText" Property="Foreground" Value="#5E35B1" />
+                                                <Setter TargetName="TabText" Property="FontWeight" Value="SemiBold" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </RadioButton.Template>
+                            </RadioButton>
+                        </StackPanel>
+                    </Border>
 
+                    <!-- Поле поиска (скрывается на дашборде) -->
                     <TextBox
                         Grid.Column="1"
                         Width="320"
                         HorizontalAlignment="Left"
                         VerticalAlignment="Center"
-                        materialDesign:HintAssist.Hint="Поиск по ФИО, пропуску..."
+                        materialDesign:HintAssist.Hint="Поиск по ФИО, отделу, пропуску..."
                         materialDesign:TextFieldAssist.HasClearButton="True"
                         materialDesign:TextFieldAssist.LeadingIcon="Magnify"
                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                        Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+                        FontSize="12"
+                        Padding="8,7"
+                        Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                        Visibility="{Binding IsDashboardView, Converter={StaticResource InverseBoolToVis}}" />
 
+                    <!-- Группа действий справа -->
                     <StackPanel
                         Grid.Column="3"
                         VerticalAlignment="Center"
                         Orientation="Horizontal">
                         <Button
                             Margin="0,0,10,0"
+                            Height="36"
                             Command="{Binding GenerateAiReportCommand}"
-                            Style="{StaticResource MaterialDesignOutlinedButton}">
+                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                            BorderBrush="#7E57C2"
+                            Foreground="#5E35B1"
+                            ToolTip="Открыть диалог с AI-Аналитиком логов">
                             <StackPanel Orientation="Horizontal">
                                 <materialDesign:PackIcon
+                                    Width="16"
+                                    Height="16"
                                     Margin="0,0,6,0"
                                     VerticalAlignment="Center"
-                                    Kind="Brain" />
-                                <TextBlock VerticalAlignment="Center" Text="Анализ ИИ" />
+                                    Foreground="#7E57C2"
+                                    Kind="AutoAwesome" />
+                                <TextBlock VerticalAlignment="Center" FontWeight="Medium" Text="Анализ ИИ" />
                             </StackPanel>
                         </Button>
 
                         <Button
                             Margin="0,0,10,0"
+                            Height="36"
                             Command="{Binding OpenScheduleSettingsCommand}"
-                            Style="{StaticResource MaterialDesignOutlinedButton}">
+                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                            ToolTip="Настройки графиков работы отделов и сотрудников">
                             <StackPanel Orientation="Horizontal">
                                 <materialDesign:PackIcon
+                                    Width="16"
+                                    Height="16"
                                     Margin="0,0,6,0"
                                     VerticalAlignment="Center"
-                                    Kind="ChartBox" />
-                                <TextBlock VerticalAlignment="Center" Text="Расписание" />
+                                    Foreground="#5E35B1"
+                                    Kind="CalendarClock" />
+                                <TextBlock VerticalAlignment="Center" FontWeight="Medium" Text="Графики" />
                             </StackPanel>
                         </Button>
 
-                        <Button Command="{Binding LoadDataCommand}" Style="{StaticResource MaterialDesignRaisedButton}">
+                        <Button
+                            Height="36"
+                            Command="{Binding LoadDataCommand}"
+                            Style="{StaticResource MaterialDesignRaisedButton}"
+                            Background="#5E35B1"
+                            BorderBrush="#5E35B1"
+                            ToolTip="Импортировать CSV-файл">
                             <StackPanel Orientation="Horizontal">
                                 <materialDesign:PackIcon
+                                    Width="16"
+                                    Height="16"
                                     Margin="0,0,6,0"
                                     VerticalAlignment="Center"
-                                    Kind="FileUpload" />
-                                <TextBlock VerticalAlignment="Center" Text="Загрузить CSV" />
+                                    Kind="FileUploadOutline" />
+                                <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="Загрузить CSV" />
                             </StackPanel>
                         </Button>
                     </StackPanel>
                 </Grid>
 
-                <!--  2 УРОВЕНЬ: Фильтры  -->
-                <StackPanel
-                    Grid.Row="2"
-                    VerticalAlignment="Center"
-                    Orientation="Horizontal">
-                    <ComboBox
-                        Width="140"
-                        Margin="0,0,15,0"
-                        materialDesign:HintAssist.Hint="Период"
-                        ItemsSource="{Binding DatePresets}"
-                        SelectedItem="{Binding SelectedDatePreset}"
-                        Style="{StaticResource MaterialDesignOutlinedComboBox}" />
+                <!--  2 УРОВЕНЬ: Выбор периода + Умные фильтры журнала  -->
+                <Grid Grid.Row="2" VerticalAlignment="Center">
+                    <Grid.ColumnDefinitions>
+                        <!-- Период и даты -->
+                        <ColumnDefinition Width="Auto" />
+                        <!-- Разделитель -->
+                        <ColumnDefinition Width="Auto" />
+                        <!-- Чипы и сброс -->
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
 
-                    <DatePicker
-                        Width="130"
-                        Margin="0,0,10,0"
-                        materialDesign:HintAssist.Hint="С даты"
-                        SelectedDate="{Binding StartDate}"
-                        Style="{StaticResource MaterialDesignOutlinedDatePicker}" />
+                    <StackPanel
+                        Grid.Column="0"
+                        VerticalAlignment="Center"
+                        Orientation="Horizontal">
+                        <ComboBox
+                            Width="140"
+                            Margin="0,0,10,0"
+                            materialDesign:HintAssist.Hint="Период"
+                            ItemsSource="{Binding DatePresets}"
+                            SelectedItem="{Binding SelectedDatePreset}"
+                            Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                            FontSize="12"
+                            Padding="8,6" />
 
-                    <DatePicker
-                        Width="130"
-                        Margin="0,0,20,0"
-                        materialDesign:HintAssist.Hint="По дату"
-                        SelectedDate="{Binding EndDate}"
-                        Style="{StaticResource MaterialDesignOutlinedDatePicker}" />
+                        <DatePicker
+                            Width="125"
+                            Margin="0,0,8,0"
+                            materialDesign:HintAssist.Hint="С даты"
+                            SelectedDate="{Binding StartDate}"
+                            Style="{StaticResource MaterialDesignOutlinedDatePicker}"
+                            FontSize="12"
+                            Padding="6,6" />
 
-                    <CheckBox
-                        Margin="0,0,10,0"
-                        Content="Опоздавшие"
-                        IsChecked="{Binding ShowLateArrivals}"
-                        Style="{StaticResource MaterialDesignFilterChipOutlineCheckBox}"
-                        ToolTip="Показать только опоздавших сотрудников" />
+                        <DatePicker
+                            Width="125"
+                            materialDesign:HintAssist.Hint="По дату"
+                            SelectedDate="{Binding EndDate}"
+                            Style="{StaticResource MaterialDesignOutlinedDatePicker}"
+                            FontSize="12"
+                            Padding="6,6" />
+                    </StackPanel>
 
-                    <CheckBox
-                        Margin="0,0,10,0"
-                        Content="Ушли рано"
-                        IsChecked="{Binding ShowEarlyDepartures}"
-                        Style="{StaticResource MaterialDesignFilterChipOutlineCheckBox}"
-                        ToolTip="Показать тех, кто ушел раньше времени" />
+                    <!-- Тонкий разделитель между датами и чипами -->
+                    <Border
+                        Grid.Column="1"
+                        Width="1"
+                        Height="24"
+                        Margin="14,0"
+                        Background="#E0E0E0"
+                        Visibility="{Binding IsDashboardView, Converter={StaticResource InverseBoolToVis}}" />
 
-                    <CheckBox
-                        Margin="0,0,20,0"
-                        Content="Не пройден алкотест"
-                        IsChecked="{Binding ShowMissingAlcotest}"
-                        Style="{StaticResource MaterialDesignFilterChipOutlineCheckBox}"
-                        ToolTip="Показать тех, Кто не прошел алкотест" />
+                    <!-- Умные цветные чипы-фильтры (скрываются на дашборде) -->
+                    <StackPanel
+                        Grid.Column="2"
+                        VerticalAlignment="Center"
+                        Orientation="Horizontal"
+                        Visibility="{Binding IsDashboardView, Converter={StaticResource InverseBoolToVis}}">
 
-                    <Button Command="{Binding ResetFiltersCommand}" Style="{StaticResource MaterialDesignFlatButton}">
-                        <StackPanel Orientation="Horizontal">
-                            <materialDesign:PackIcon
-                                Margin="0,0,6,0"
-                                VerticalAlignment="Center"
-                                Kind="FilterRemove" />
-                            <TextBlock VerticalAlignment="Center" Text="Сброс" />
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
+                        <!-- Опоздавшие -->
+                        <CheckBox
+                            Margin="0,0,8,0"
+                            Cursor="Hand"
+                            IsChecked="{Binding ShowLateArrivals}">
+                            <CheckBox.Template>
+                                <ControlTemplate TargetType="CheckBox">
+                                    <Border
+                                        x:Name="ChipBorder"
+                                        Background="#FAFAFA"
+                                        BorderBrush="#E0E0E0"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Padding="10,5">
+                                        <StackPanel Orientation="Horizontal">
+                                            <materialDesign:PackIcon
+                                                x:Name="ChipIcon"
+                                                Width="14"
+                                                Height="14"
+                                                Margin="0,0,5,0"
+                                                VerticalAlignment="Center"
+                                                Foreground="#757575"
+                                                Kind="ClockAlertOutline" />
+                                            <TextBlock
+                                                x:Name="ChipText"
+                                                VerticalAlignment="Center"
+                                                FontSize="12"
+                                                FontWeight="Medium"
+                                                Foreground="#616161"
+                                                Text="Опоздавшие" />
+                                            <Border
+                                                x:Name="CountBadge"
+                                                Margin="6,0,0,0"
+                                                Padding="5,1"
+                                                Background="#EEEEEE"
+                                                CornerRadius="6"
+                                                VerticalAlignment="Center">
+                                                <TextBlock
+                                                    x:Name="CountText"
+                                                    FontSize="10"
+                                                    FontWeight="Bold"
+                                                    Foreground="#757575"
+                                                    Text="{Binding DataContext.LateCount, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                            </Border>
+                                        </StackPanel>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsChecked" Value="True">
+                                            <Setter TargetName="ChipBorder" Property="Background" Value="#FFF3E0" />
+                                            <Setter TargetName="ChipBorder" Property="BorderBrush" Value="#FFB74D" />
+                                            <Setter TargetName="ChipIcon" Property="Foreground" Value="#E65100" />
+                                            <Setter TargetName="ChipText" Property="Foreground" Value="#E65100" />
+                                            <Setter TargetName="ChipText" Property="FontWeight" Value="SemiBold" />
+                                            <Setter TargetName="CountBadge" Property="Background" Value="#FFE0B2" />
+                                            <Setter TargetName="CountText" Property="Foreground" Value="#BF360C" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </CheckBox.Template>
+                        </CheckBox>
+
+                        <!-- Ушли рано -->
+                        <CheckBox
+                            Margin="0,0,8,0"
+                            Cursor="Hand"
+                            IsChecked="{Binding ShowEarlyDepartures}">
+                            <CheckBox.Template>
+                                <ControlTemplate TargetType="CheckBox">
+                                    <Border
+                                        x:Name="ChipBorder"
+                                        Background="#FAFAFA"
+                                        BorderBrush="#E0E0E0"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Padding="10,5">
+                                        <StackPanel Orientation="Horizontal">
+                                            <materialDesign:PackIcon
+                                                x:Name="ChipIcon"
+                                                Width="14"
+                                                Height="14"
+                                                Margin="0,0,5,0"
+                                                VerticalAlignment="Center"
+                                                Foreground="#757575"
+                                                Kind="RunFast" />
+                                            <TextBlock
+                                                x:Name="ChipText"
+                                                VerticalAlignment="Center"
+                                                FontSize="12"
+                                                FontWeight="Medium"
+                                                Foreground="#616161"
+                                                Text="Ушли рано" />
+                                            <Border
+                                                x:Name="CountBadge"
+                                                Margin="6,0,0,0"
+                                                Padding="5,1"
+                                                Background="#EEEEEE"
+                                                CornerRadius="6"
+                                                VerticalAlignment="Center">
+                                                <TextBlock
+                                                    x:Name="CountText"
+                                                    FontSize="10"
+                                                    FontWeight="Bold"
+                                                    Foreground="#757575"
+                                                    Text="{Binding DataContext.EarlyCount, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                            </Border>
+                                        </StackPanel>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsChecked" Value="True">
+                                            <Setter TargetName="ChipBorder" Property="Background" Value="#FFEBEE" />
+                                            <Setter TargetName="ChipBorder" Property="BorderBrush" Value="#E57373" />
+                                            <Setter TargetName="ChipIcon" Property="Foreground" Value="#C62828" />
+                                            <Setter TargetName="ChipText" Property="Foreground" Value="#C62828" />
+                                            <Setter TargetName="ChipText" Property="FontWeight" Value="SemiBold" />
+                                            <Setter TargetName="CountBadge" Property="Background" Value="#FFCDD2" />
+                                            <Setter TargetName="CountText" Property="Foreground" Value="#B71C1C" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </CheckBox.Template>
+                        </CheckBox>
+
+                        <!-- Не пройден алкотест -->
+                        <CheckBox
+                            Margin="0,0,12,0"
+                            Cursor="Hand"
+                            IsChecked="{Binding ShowMissingAlcotest}">
+                            <CheckBox.Template>
+                                <ControlTemplate TargetType="CheckBox">
+                                    <Border
+                                        x:Name="ChipBorder"
+                                        Background="#FAFAFA"
+                                        BorderBrush="#E0E0E0"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Padding="10,5">
+                                        <StackPanel Orientation="Horizontal">
+                                            <materialDesign:PackIcon
+                                                x:Name="ChipIcon"
+                                                Width="14"
+                                                Height="14"
+                                                Margin="0,0,5,0"
+                                                VerticalAlignment="Center"
+                                                Foreground="#757575"
+                                                Kind="AlertOctagonOutline" />
+                                            <TextBlock
+                                                x:Name="ChipText"
+                                                VerticalAlignment="Center"
+                                                FontSize="12"
+                                                FontWeight="Medium"
+                                                Foreground="#616161"
+                                                Text="Без алкотеста" />
+                                            <Border
+                                                x:Name="CountBadge"
+                                                Margin="6,0,0,0"
+                                                Padding="5,1"
+                                                Background="#EEEEEE"
+                                                CornerRadius="6"
+                                                VerticalAlignment="Center">
+                                                <TextBlock
+                                                    x:Name="CountText"
+                                                    FontSize="10"
+                                                    FontWeight="Bold"
+                                                    Foreground="#757575"
+                                                    Text="{Binding DataContext.MissingAlcotestCount, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                            </Border>
+                                        </StackPanel>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsChecked" Value="True">
+                                            <Setter TargetName="ChipBorder" Property="Background" Value="#FCE4EC" />
+                                            <Setter TargetName="ChipBorder" Property="BorderBrush" Value="#F06292" />
+                                            <Setter TargetName="ChipIcon" Property="Foreground" Value="#AD1457" />
+                                            <Setter TargetName="ChipText" Property="Foreground" Value="#AD1457" />
+                                            <Setter TargetName="ChipText" Property="FontWeight" Value="SemiBold" />
+                                            <Setter TargetName="CountBadge" Property="Background" Value="#F8BBD0" />
+                                            <Setter TargetName="CountText" Property="Foreground" Value="#880E4F" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </CheckBox.Template>
+                        </CheckBox>
+
+                        <!-- Кнопка Сброс -->
+                        <Button
+                            Command="{Binding ResetFiltersCommand}"
+                            Style="{StaticResource MaterialDesignFlatButton}"
+                            Height="32"
+                            Padding="8,0"
+                            ToolTip="Сбросить все примененные фильтры">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon
+                                    Width="15"
+                                    Height="15"
+                                    Margin="0,0,4,0"
+                                    VerticalAlignment="Center"
+                                    Foreground="#757575"
+                                    Kind="FilterRemoveOutline" />
+                                <TextBlock
+                                    VerticalAlignment="Center"
+                                    FontSize="12"
+                                    Foreground="#757575"
+                                    Text="Сброс" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
             </Grid>
         </Border>
 
@@ -567,6 +875,41 @@
                     Header="Примечание" />
             </DataGrid.Columns>
         </DataGrid>
+
+        <!-- Empty State для журнала логов -->
+        <Grid
+            Grid.Row="1"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Visibility="{Binding ShowLogsEmptyState, Converter={StaticResource BoolToVis}}">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <materialDesign:PackIcon
+                    Width="56"
+                    Height="56"
+                    HorizontalAlignment="Center"
+                    Foreground="#BDBDBD"
+                    Kind="FileSearchOutline" />
+                <TextBlock
+                    Margin="0,14,0,4"
+                    HorizontalAlignment="Center"
+                    FontSize="16"
+                    FontWeight="SemiBold"
+                    Foreground="#757575"
+                    Text="Записей не найдено" />
+                <TextBlock
+                    HorizontalAlignment="Center"
+                    FontSize="12"
+                    Foreground="#9E9E9E"
+                    Text="Попробуйте изменить параметры периода или сбросить фильтры" />
+                <Button
+                    Margin="0,14,0,0"
+                    HorizontalAlignment="Center"
+                    Command="{Binding ResetFiltersCommand}"
+                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                    Content="Сбросить фильтры" />
+            </StackPanel>
+        </Grid>
+
         <views:DashboardView Grid.Row="1" Visibility="{Binding IsDashboardView, Converter={StaticResource BoolToVis}}" />
         <StatusBar
             Grid.Row="2"

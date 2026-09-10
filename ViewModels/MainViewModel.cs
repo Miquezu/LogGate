@@ -66,6 +66,23 @@ public partial class MainViewModel : ObservableObject
     private bool _showMissingAlcotest;
 
     [ObservableProperty]
+    private int _lateCount;
+
+    [ObservableProperty]
+    private int _earlyCount;
+
+    [ObservableProperty]
+    private int _missingAlcotestCount;
+
+    public bool HasActiveFilters =>
+        !string.IsNullOrWhiteSpace(SearchText) ||
+        ShowLateArrivals ||
+        ShowEarlyDepartures ||
+        ShowMissingAlcotest ||
+        StartDate != null ||
+        EndDate != null;
+
+    [ObservableProperty]
     private string _sortColumn = "EventTime";
 
     [ObservableProperty]
@@ -86,6 +103,11 @@ public partial class MainViewModel : ObservableObject
     // Режим отображения: Таблица или Дашборд
     [ObservableProperty]
     private bool _isDashboardView;
+
+    public bool ShowLogsEmptyState => !IsDashboardView && FilteredCount == 0;
+
+    partial void OnIsDashboardViewChanged(bool value) => OnPropertyChanged(nameof(ShowLogsEmptyState));
+    partial void OnFilteredCountChanged(int value) => OnPropertyChanged(nameof(ShowLogsEmptyState));
 
     // KPI Метрики Дашборда
     [ObservableProperty]
@@ -215,6 +237,7 @@ public partial class MainViewModel : ObservableObject
 
     private void RequestDataRefresh(bool resetPage = true, int delayMs = 0)
     {
+        OnPropertyChanged(nameof(HasActiveFilters));
         _filterCts?.Cancel();
         _filterCts?.Dispose();
         _filterCts = new CancellationTokenSource();
@@ -239,6 +262,10 @@ public partial class MainViewModel : ObservableObject
 
             _scheduleService.EvaluateCompliance(rawData);
             token.ThrowIfCancellationRequested();
+
+            LateCount = rawData.Count(x => x.IsLate);
+            EarlyCount = rawData.Count(x => x.IsEarlyDeparture);
+            MissingAlcotestCount = rawData.Count(item => _scheduleService.RequiresAlcotest(item) && item.AlcotestResult is null);
 
             IEnumerable<DataItem> filtered = rawData;
 
@@ -635,6 +662,7 @@ public partial class MainViewModel : ObservableObject
         ShowLateArrivals = false;
         ShowEarlyDepartures = false;
         ShowMissingAlcotest = false;
+        OnPropertyChanged(nameof(HasActiveFilters));
 
         LoadDataFromDatabase();
     }
