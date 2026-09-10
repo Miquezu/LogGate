@@ -1,4 +1,4 @@
-﻿<Window
+<Window
     x:Class="LogGate.Views.ScheduleSettingsWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -7,137 +7,552 @@
     xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     Title="Настройки графиков работы"
-    Width="700"
-    Height="500"
+    Width="860"
+    Height="620"
+    MinWidth="800"
+    MinHeight="540"
     Background="#F5F6F8"
     Style="{StaticResource MaterialDesignWindow}"
     WindowStartupLocation="CenterOwner"
     mc:Ignorable="d">
+
     <Window.Resources>
-        <converters:BooleanToTextConverter x:Key="BooleanToTextConverter" />
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+        <converters:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis" />
     </Window.Resources>
-    <Grid Margin="15">
+
+    <Grid Margin="16">
         <Grid.RowDefinitions>
+            <!-- 0. Шапка окна -->
             <RowDefinition Height="Auto" />
+            <!-- 1. Карточка создания правила -->
+            <RowDefinition Height="Auto" />
+            <!-- 2. Таблица действующих правил -->
             <RowDefinition Height="*" />
+            <!-- 3. Нижняя панель действий -->
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <Border
-            Grid.Row="0"
-            Margin="0,0,0,15"
-            Padding="5"
+        <!-- 0. ШАПКА ОКНА (Hero Header) -->
+        <Grid Grid.Row="0" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Border
+                Grid.Column="0"
+                Width="46"
+                Height="46"
+                Margin="0,0,14,0"
+                VerticalAlignment="Center"
+                Background="#EDE7F6"
+                CornerRadius="12">
+                <materialDesign:PackIcon
+                    Width="26"
+                    Height="26"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Foreground="#5E35B1"
+                    Kind="CalendarClock" />
+            </Border>
+
+            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                <TextBlock
+                    FontSize="18"
+                    FontWeight="Bold"
+                    Foreground="#212121"
+                    Text="Настройки графиков работы" />
+                <TextBlock
+                    Margin="0,2,0,0"
+                    FontSize="12"
+                    Foreground="#757575"
+                    Text="Задайте плановые интервалы прихода и ухода для отделов или индивидуально для сотрудников" />
+            </StackPanel>
+        </Grid>
+
+        <!-- 1. КАРТОЧКА СОЗДАНИЯ ПРАВИЛА -->
+        <materialDesign:Card
+            Grid.Row="1"
+            Margin="0,0,0,16"
+            Padding="16,14"
             materialDesign:ElevationAssist.Elevation="Dp2"
             Background="{DynamicResource MaterialDesignPaper}"
-            CornerRadius="8">
+            UniformCornerRadius="10">
             <StackPanel>
-                <WrapPanel VerticalAlignment="Bottom">
-                    <StackPanel Margin="0,0,15,0">
-                        <TextBlock
-                            Margin="0,0,0,4"
-                            FontSize="10"
-                            Opacity="0.6"
-                            Text="Тип графика:" />
-                        <ToggleButton
-                            IsChecked="{Binding NewIsPersonal}"
-                            Style="{StaticResource MaterialDesignSwitchToggleButton}"
-                            ToolTip="Отключено = Отдел, Включено = Сотрудник" />
-                        <TextBlock
-                            Margin="0,2,0,0"
-                            HorizontalAlignment="Center"
-                            FontSize="10"
-                            Text="{Binding NewIsPersonal, Converter={StaticResource BooleanToTextConverter}}" />
+                <!-- Заголовок формы -->
+                <StackPanel Margin="0,0,0,12" Orientation="Horizontal">
+                    <materialDesign:PackIcon
+                        Width="16"
+                        Height="16"
+                        Margin="0,0,6,0"
+                        VerticalAlignment="Center"
+                        Foreground="#5E35B1"
+                        Kind="PlusCircleOutline" />
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        FontSize="13"
+                        FontWeight="SemiBold"
+                        Foreground="#424242"
+                        Text="Новое правило графика" />
+                </StackPanel>
+
+                <!-- Элементы формы -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <!-- Тип правила: Отдел / Сотрудник -->
+                        <ColumnDefinition Width="Auto" />
+                        <!-- Название отдела или ФИО -->
+                        <ColumnDefinition Width="*" />
+                        <!-- Время прихода (с) -->
+                        <ColumnDefinition Width="105" />
+                        <!-- Разделитель -->
+                        <ColumnDefinition Width="Auto" />
+                        <!-- Время ухода (по) -->
+                        <ColumnDefinition Width="105" />
+                        <!-- Чекбокс алкотеста -->
+                        <ColumnDefinition Width="Auto" />
+                        <!-- Кнопка Добавить -->
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Переключатель: Отдел / Сотрудник -->
+                    <StackPanel
+                        Grid.Column="0"
+                        Margin="0,0,14,0"
+                        VerticalAlignment="Center"
+                        Orientation="Horizontal">
+                        <RadioButton
+                            GroupName="RuleType"
+                            Margin="0,0,10,0"
+                            VerticalAlignment="Center"
+                            Content="🏢 Отдел"
+                            FontSize="12"
+                            IsChecked="{Binding NewIsDepartment, Mode=TwoWay}" />
+                        <RadioButton
+                            GroupName="RuleType"
+                            VerticalAlignment="Center"
+                            Content="👤 Сотрудник"
+                            FontSize="12"
+                            IsChecked="{Binding NewIsPersonal, Mode=TwoWay}" />
                     </StackPanel>
 
+                    <!-- Текстовое поле: Отдел / ФИО -->
                     <TextBox
-                        Width="200"
-                        Height="50"
-                        Margin="0,0,15,0"
+                        Grid.Column="1"
+                        Margin="0,0,12,0"
+                        VerticalAlignment="Center"
                         materialDesign:HintAssist.Hint="Название отдела или ФИО"
-                        Style="{StaticResource MaterialDesignFloatingHintTextBox}"
+                        materialDesign:TextFieldAssist.HasClearButton="True"
+                        Style="{StaticResource MaterialDesignOutlinedTextBox}"
                         Text="{Binding NewTargetName, UpdateSourceTrigger=PropertyChanged}" />
-                    <StackPanel Margin="0,0,15,0">
-                        <materialDesign:TimePicker
-                            Width="100"
-                            Height="25"
-                            Margin="0,0,0,5"
-                            materialDesign:HintAssist.Hint="Приход (С)"
-                            Is24Hours="True"
-                            SelectedTime="{Binding NewStartTime}" />
-                        <materialDesign:TimePicker
-                            Width="100"
-                            Height="25"
-                            Margin="0,0,0,0"
-                            materialDesign:HintAssist.Hint="Уход (По)"
-                            Is24Hours="True"
-                            SelectedTime="{Binding NewEndTime}" />
-                    </StackPanel>
 
+                    <!-- Время прихода -->
+                    <materialDesign:TimePicker
+                        Grid.Column="2"
+                        Margin="0,0,6,0"
+                        VerticalAlignment="Center"
+                        materialDesign:HintAssist.Hint="Приход (с)"
+                        Is24Hours="True"
+                        SelectedTime="{Binding NewStartTime}" />
+
+                    <!-- Тире -->
+                    <TextBlock
+                        Grid.Column="3"
+                        Margin="0,0,6,0"
+                        VerticalAlignment="Center"
+                        FontWeight="Bold"
+                        Foreground="#9E9E9E"
+                        Text="—" />
+
+                    <!-- Время ухода -->
+                    <materialDesign:TimePicker
+                        Grid.Column="4"
+                        Margin="0,0,14,0"
+                        VerticalAlignment="Center"
+                        materialDesign:HintAssist.Hint="Уход (по)"
+                        Is24Hours="True"
+                        SelectedTime="{Binding NewEndTime}" />
+
+                    <!-- Чекбокс алкотеста -->
+                    <CheckBox
+                        Grid.Column="5"
+                        Margin="0,0,14,0"
+                        VerticalAlignment="Center"
+                        Content="Алкотест"
+                        IsChecked="{Binding NewRequiresAlcotest}"
+                        Style="{StaticResource MaterialDesignFilterChipOutlineCheckBox}"
+                        ToolTip="Обязательный контроль алкотестера для данного графика" />
+
+                    <!-- Кнопка Добавить -->
                     <Button
+                        Grid.Column="6"
+                        Height="36"
+                        Padding="14,0"
+                        VerticalAlignment="Center"
+                        Background="#5E35B1"
+                        BorderBrush="#5E35B1"
                         Command="{Binding AddRuleCommand}"
-                        Style="{StaticResource MaterialDesignFloatingActionMiniButton}"
-                        ToolTip="Добавить правило">
-                        <materialDesign:PackIcon
-                            Width="24"
-                            Height="24"
-                            Kind="Plus" />
+                        Style="{StaticResource MaterialDesignRaisedButton}"
+                        ToolTip="Добавить правило в список">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon
+                                Width="18"
+                                Height="18"
+                                Margin="0,0,6,0"
+                                VerticalAlignment="Center"
+                                Kind="Plus" />
+                            <TextBlock
+                                VerticalAlignment="Center"
+                                FontWeight="SemiBold"
+                                Text="Добавить" />
+                        </StackPanel>
                     </Button>
-                </WrapPanel>
+                </Grid>
             </StackPanel>
-        </Border>
+        </materialDesign:Card>
 
-        <!--  Таблица существующих правил  -->
-        <DataGrid
-            Grid.Row="1"
-            AlternatingRowBackground="#FFF0F0F0"
-            AutoGenerateColumns="False"
-            Background="{DynamicResource MaterialDesignPaper}"
-            CanUserAddRows="False"
-            ItemsSource="{Binding Rules}"
-            SelectedItem="{Binding SelectedRule}">
-            <DataGrid.Columns>
-                <DataGridCheckBoxColumn
-                    Width="SizeToCells"
-                    Binding="{Binding IsPersonal}"
-                    Header="Индивидуальный" />
-                <DataGridTextColumn
-                    Width="*"
-                    Binding="{Binding TargetName}"
-                    Header="Отдел / ФИО" />
-                <DataGridTextColumn
-                    Width="SizeToHeader"
-                    Binding="{Binding StartTime, StringFormat=\{0:hh\\:mm\}}"
-                    Header="Время прихода" />
-                <DataGridTextColumn
-                    Width="SizeToHeader"
-                    Binding="{Binding EndTime, StringFormat=\{0:hh\\:mm\}}"
-                    Header="Время ухода" />
-                <DataGridCheckBoxColumn
-                    Width="SizeToHeader"
-                    Binding="{Binding RequiresAlcotest, UpdateSourceTrigger=PropertyChanged}"
-                    Header="Требуется алкотест" />
-            </DataGrid.Columns>
-            <DataGrid.ContextMenu>
-                <ContextMenu>
-                    <MenuItem Command="{Binding DeleteRuleCommand}" Header="Удалить правило">
-                        <MenuItem.Icon>
-                            <materialDesign:PackIcon Kind="TrashCan" />
-                        </MenuItem.Icon>
-                    </MenuItem>
-                </ContextMenu>
-            </DataGrid.ContextMenu>
-        </DataGrid>
-
-        <!--  Панель сохранения  -->
-        <StackPanel
+        <!-- 2. ТАБЛИЦА ДЕЙСТВУЮЩИХ ПРАВИЛ -->
+        <materialDesign:Card
             Grid.Row="2"
-            Margin="0,15,0,0"
-            HorizontalAlignment="Right"
-            Orientation="Horizontal">
+            Margin="0,0,0,16"
+            materialDesign:ElevationAssist.Elevation="Dp2"
+            Background="{DynamicResource MaterialDesignPaper}"
+            UniformCornerRadius="10">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <!-- Шапка списка -->
+                    <RowDefinition Height="Auto" />
+                    <!-- Содержимое: Таблица или Empty State -->
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <!-- Заголовок карточки таблицы -->
+                <Border
+                    Grid.Row="0"
+                    Padding="16,12"
+                    BorderBrush="#EEEEEE"
+                    BorderThickness="0,0,0,1">
+                    <Grid>
+                        <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
+                            <materialDesign:PackIcon
+                                Width="18"
+                                Height="18"
+                                Margin="0,0,8,0"
+                                VerticalAlignment="Center"
+                                Foreground="#5E35B1"
+                                Kind="FormatListBulletedSquare" />
+                            <TextBlock
+                                VerticalAlignment="Center"
+                                FontSize="14"
+                                FontWeight="SemiBold"
+                                Foreground="#212121"
+                                Text="Действующие правила" />
+                            <Border
+                                Margin="10,0,0,0"
+                                Padding="8,2"
+                                VerticalAlignment="Center"
+                                Background="#EDE7F6"
+                                CornerRadius="10">
+                                <TextBlock
+                                    FontSize="11"
+                                    FontWeight="Bold"
+                                    Foreground="#5E35B1"
+                                    Text="{Binding Rules.Count, StringFormat='Правил: {0}'}" />
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- DataGrid существующих правил -->
+                <DataGrid
+                    Grid.Row="1"
+                    AlternatingRowBackground="#FAFAFA"
+                    AutoGenerateColumns="False"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    CanUserAddRows="False"
+                    CanUserDeleteRows="False"
+                    HeadersVisibility="Column"
+                    ItemsSource="{Binding Rules}"
+                    RowHeight="42"
+                    SelectedItem="{Binding SelectedRule}"
+                    SelectionUnit="FullRow">
+                    <DataGrid.Columns>
+                        <!-- Тип правила (Отдел / Сотрудник) -->
+                        <DataGridTemplateColumn Width="135" Header="Тип правила" SortMemberPath="IsPersonal">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border
+                                        Padding="7,3"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Center"
+                                        CornerRadius="8">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="#E3F2FD" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsPersonal}" Value="True">
+                                                        <Setter Property="Background" Value="#EDE7F6" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <StackPanel Orientation="Horizontal">
+                                            <materialDesign:PackIcon
+                                                Width="14"
+                                                Height="14"
+                                                Margin="0,0,4,0"
+                                                VerticalAlignment="Center">
+                                                <materialDesign:PackIcon.Style>
+                                                    <Style TargetType="materialDesign:PackIcon">
+                                                        <Setter Property="Kind" Value="Domain" />
+                                                        <Setter Property="Foreground" Value="#1976D2" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsPersonal}" Value="True">
+                                                                <Setter Property="Kind" Value="Account" />
+                                                                <Setter Property="Foreground" Value="#5E35B1" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </materialDesign:PackIcon.Style>
+                                            </materialDesign:PackIcon>
+                                            <TextBlock
+                                                VerticalAlignment="Center"
+                                                FontSize="11"
+                                                FontWeight="SemiBold">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Text" Value="Отдел" />
+                                                        <Setter Property="Foreground" Value="#1976D2" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsPersonal}" Value="True">
+                                                                <Setter Property="Text" Value="Сотрудник" />
+                                                                <Setter Property="Foreground" Value="#5E35B1" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- Отдел / ФИО -->
+                        <DataGridTemplateColumn Width="*" Header="Отдел / ФИО" SortMemberPath="TargetName">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock
+                                        VerticalAlignment="Center"
+                                        FontSize="13"
+                                        FontWeight="Medium"
+                                        Foreground="#212121"
+                                        Text="{Binding TargetName}" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- График работы -->
+                        <DataGridTemplateColumn Width="160" Header="График работы" SortMemberPath="StartTime">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border
+                                        Padding="8,3"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Center"
+                                        Background="#F0F2F5"
+                                        CornerRadius="6">
+                                        <StackPanel Orientation="Horizontal">
+                                            <materialDesign:PackIcon
+                                                Width="14"
+                                                Height="14"
+                                                Margin="0,0,5,0"
+                                                VerticalAlignment="Center"
+                                                Foreground="#546E7A"
+                                                Kind="ClockOutline" />
+                                            <TextBlock
+                                                VerticalAlignment="Center"
+                                                FontSize="12"
+                                                FontWeight="SemiBold"
+                                                Foreground="#37474F"
+                                                Text="{Binding StartTime, StringFormat=\{0:hh\\:mm\}}" />
+                                            <TextBlock
+                                                VerticalAlignment="Center"
+                                                FontSize="12"
+                                                FontWeight="SemiBold"
+                                                Foreground="#90A4AE"
+                                                Text=" — " />
+                                            <TextBlock
+                                                VerticalAlignment="Center"
+                                                FontSize="12"
+                                                FontWeight="SemiBold"
+                                                Foreground="#37474F"
+                                                Text="{Binding EndTime, StringFormat=\{0:hh\\:mm\}}" />
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- Требуется алкотест -->
+                        <DataGridTemplateColumn Width="145" Header="Алкотест" SortMemberPath="RequiresAlcotest">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <CheckBox
+                                        VerticalAlignment="Center"
+                                        IsChecked="{Binding RequiresAlcotest, UpdateSourceTrigger=PropertyChanged}">
+                                        <CheckBox.Content>
+                                            <Border
+                                                Padding="6,2"
+                                                CornerRadius="6">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Background" Value="#F5F5F5" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding RequiresAlcotest}" Value="True">
+                                                                <Setter Property="Background" Value="#FFEBEE" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <TextBlock
+                                                    FontSize="11"
+                                                    FontWeight="SemiBold">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Text" Value="Не требуется" />
+                                                            <Setter Property="Foreground" Value="#757575" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding RequiresAlcotest}" Value="True">
+                                                                    <Setter Property="Text" Value="Обязателен" />
+                                                                    <Setter Property="Foreground" Value="#C62828" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </Border>
+                                        </CheckBox.Content>
+                                    </CheckBox>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- Действие: Удаление прямо в строке -->
+                        <DataGridTemplateColumn Width="60">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button
+                                        Width="30"
+                                        Height="30"
+                                        Padding="0"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Command="{Binding DataContext.DeleteRuleCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                        CommandParameter="{Binding}"
+                                        Style="{StaticResource MaterialDesignFlatButton}"
+                                        ToolTip="Удалить правило">
+                                        <materialDesign:PackIcon
+                                            Width="18"
+                                            Height="18"
+                                            Foreground="#E57373"
+                                            Kind="TrashCanOutline" />
+                                    </Button>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+
+                    <DataGrid.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Command="{Binding DeleteRuleCommand}" Header="Удалить правило">
+                                <MenuItem.Icon>
+                                    <materialDesign:PackIcon Foreground="#C62828" Kind="TrashCan" />
+                                </MenuItem.Icon>
+                            </MenuItem>
+                        </ContextMenu>
+                    </DataGrid.ContextMenu>
+                </DataGrid>
+
+                <!-- Empty State: заглушка при отсутствии правил -->
+                <Grid
+                    Grid.Row="1"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Visibility="{Binding HasNoRules, Converter={StaticResource BoolToVis}}">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <materialDesign:PackIcon
+                            Width="52"
+                            Height="52"
+                            HorizontalAlignment="Center"
+                            Foreground="#BDBDBD"
+                            Kind="CalendarBlankOutline" />
+                        <TextBlock
+                            Margin="0,12,0,4"
+                            HorizontalAlignment="Center"
+                            FontSize="15"
+                            FontWeight="SemiBold"
+                            Foreground="#757575"
+                            Text="Правила графиков еще не добавлены" />
+                        <TextBlock
+                            HorizontalAlignment="Center"
+                            FontSize="12"
+                            Foreground="#9E9E9E"
+                            Text="Заполните форму выше и нажмите «Добавить», чтобы настроить плановые интервалы" />
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </materialDesign:Card>
+
+        <!-- 3. НИЖНЯЯ ПАНЕЛЬ ДЕЙСТВИЙ -->
+        <Grid Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <!-- Подсказка -->
+                <ColumnDefinition Width="*" />
+                <!-- Кнопка сохранения -->
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0" VerticalAlignment="Center" Orientation="Horizontal">
+                <materialDesign:PackIcon
+                    Width="18"
+                    Height="18"
+                    Margin="0,0,6,0"
+                    VerticalAlignment="Center"
+                    Foreground="#5E35B1"
+                    Opacity="0.8"
+                    Kind="InformationOutline" />
+                <TextBlock
+                    VerticalAlignment="Center"
+                    FontSize="11"
+                    Foreground="#757575"
+                    Text="Настройки графиков сохраняются в базе данных и применяются ко всем расчетам" />
+            </StackPanel>
+
             <Button
-                Width="200"
+                Grid.Column="1"
+                Width="220"
+                Height="38"
+                Background="#5E35B1"
+                BorderBrush="#5E35B1"
                 Command="{Binding SaveChangesCommand}"
-                Content="Сохранить изменения" />
-        </StackPanel>
+                Style="{StaticResource MaterialDesignRaisedButton}"
+                materialDesign:ElevationAssist.Elevation="Dp2">
+                <StackPanel Orientation="Horizontal">
+                    <materialDesign:PackIcon
+                        Width="18"
+                        Height="18"
+                        Margin="0,0,8,0"
+                        VerticalAlignment="Center"
+                        Kind="ContentSaveCheckOutline" />
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        FontWeight="SemiBold"
+                        Text="Сохранить изменения" />
+                </StackPanel>
+            </Button>
+        </Grid>
     </Grid>
 </Window>

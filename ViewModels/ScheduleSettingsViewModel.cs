@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LogGate.Interfaces;
 using LogGate.Models;
@@ -19,6 +19,24 @@ namespace LogGate.ViewModels
         [ObservableProperty]
         private bool _newIsPersonal;
 
+        public bool NewIsDepartment
+        {
+            get => !NewIsPersonal;
+            set
+            {
+                if (value)
+                    NewIsPersonal = false;
+            }
+        }
+
+        partial void OnNewIsPersonalChanged(bool value)
+        {
+            OnPropertyChanged(nameof(NewIsDepartment));
+        }
+
+        [ObservableProperty]
+        private bool _newRequiresAlcotest;
+
         // По умолчанию ставим 08:00 и 16:30
         [ObservableProperty]
         private DateTime? _newStartTime = new DateTime(2000, 1, 1, 8, 0, 0);
@@ -28,6 +46,9 @@ namespace LogGate.ViewModels
 
         [ObservableProperty]
         private ObservableCollection<WorkScheduleRule> _rules = [];
+
+        public bool HasNoRules => Rules == null || Rules.Count == 0;
+        public bool HasRules => Rules != null && Rules.Count > 0;
 
         [ObservableProperty]
         private WorkScheduleRule? _selectedRule;
@@ -55,24 +76,37 @@ namespace LogGate.ViewModels
                 TargetName = NewTargetName.Trim(),
                 IsPersonal = NewIsPersonal,
                 StartTime = NewStartTime.Value.TimeOfDay,
-                EndTime = NewEndTime.Value.TimeOfDay
+                EndTime = NewEndTime.Value.TimeOfDay,
+                RequiresAlcotest = NewRequiresAlcotest
             };
 
             Rules.Add(rule);
             NewTargetName = string.Empty; // Очищаем поле после добавления
+            UpdateRulesState();
         }
 
         [RelayCommand]
-        private void DeleteRule()
+        private void DeleteRule(WorkScheduleRule? rule = null)
         {
-            if (SelectedRule != null)
-                Rules.Remove(SelectedRule);
+            var target = rule ?? SelectedRule;
+            if (target != null)
+            {
+                Rules.Remove(target);
+                UpdateRulesState();
+            }
+        }
+
+        private void UpdateRulesState()
+        {
+            OnPropertyChanged(nameof(HasNoRules));
+            OnPropertyChanged(nameof(HasRules));
         }
 
         private async Task LoadRulesAsync()
         {
             var dbRules = await _dataRepository.GetAllWorkRulesAsync();
             Rules = new ObservableCollection<WorkScheduleRule>(dbRules);
+            UpdateRulesState();
         }
 
         [RelayCommand]

@@ -209,6 +209,8 @@
             VirtualizingPanel.IsVirtualizing="True"
             VirtualizingPanel.VirtualizationMode="Recycling"
             ScrollViewer.CanContentScroll="True"
+            ScrollViewer.HorizontalScrollBarVisibility="Auto"
+            ScrollViewer.VerticalScrollBarVisibility="Auto"
             Visibility="{Binding IsDashboardView, Converter={StaticResource InverseBoolToVis}}">
 
             <DataGrid.InputBindings>
@@ -218,7 +220,7 @@
             <DataGrid.Columns>
                 <!-- Дата -->
                 <DataGridTextColumn
-                    Width="SizeToCells"
+                    Width="85"
                     Binding="{Binding EventTime, StringFormat=\{0:dd.MM.yy\}}"
                     Header="Дата"
                     IsReadOnly="True"
@@ -297,11 +299,11 @@
                 </DataGridTemplateColumn>
 
                 <!-- Вход / Выход (стильный чип с иконкой) -->
-                <DataGridTemplateColumn Width="90" Header="Вх./Вых." SortMemberPath="Direction">
+                <DataGridTemplateColumn Width="105" Header="Вх./Вых." SortMemberPath="Direction">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <Border
-                                Padding="6,2"
+                                Padding="5,2"
                                 HorizontalAlignment="Left"
                                 VerticalAlignment="Center"
                                 CornerRadius="8">
@@ -368,7 +370,7 @@
 
                 <!-- Время 🌡️ -->
                 <DataGridTextColumn
-                    Width="SizeToCells"
+                    Width="95"
                     Binding="{Binding TemperatureTime, StringFormat=\{0:HH:mm:ss\}}"
                     Header="Время 🌡️"
                     IsReadOnly="True"
@@ -436,8 +438,8 @@
 
                 <!-- Время алко. -->
                 <DataGridTextColumn
-                    Width="100"
-                    Binding="{Binding AlcotestTime, StringFormat=\{0:dd.MM.yy HH:mm:ss\}}"
+                    Width="115"
+                    Binding="{Binding AlcotestTime, StringFormat=\{0:HH:mm:ss\}}"
                     Header="Время алко."
                     IsReadOnly="True"
                     SortMemberPath="AlcotestTime" />
@@ -505,6 +507,7 @@
                 <!-- ФИО -->
                 <DataGridTextColumn
                     Width="SizeToCells"
+                    MinWidth="200"
                     Binding="{Binding FullName}"
                     Header="ФИО"
                     IsReadOnly="True"
@@ -528,7 +531,7 @@
 
                 <!-- Подразделение -->
                 <DataGridTextColumn
-                    Width="140"
+                    Width="170"
                     Binding="{Binding Department}"
                     Header="Подразделение"
                     IsReadOnly="True"
@@ -536,7 +539,7 @@
 
                 <!-- Таб. № -->
                 <DataGridTextColumn
-                    Width="SizeToCells"
+                    Width="75"
                     Binding="{Binding EmployeeNumber}"
                     Header="Таб. №"
                     IsReadOnly="True"
@@ -544,7 +547,7 @@
 
                 <!-- Пропуск -->
                 <DataGridTextColumn
-                    Width="SizeToCells"
+                    Width="85"
                     Binding="{Binding PassNumber}"
                     Header="Пропуск"
                     IsReadOnly="True"
