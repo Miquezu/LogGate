@@ -168,6 +168,42 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void SwitchToDashboardView() => IsDashboardView = true;
 
+    [RelayCommand]
+    private void DrillDownAll()
+    {
+        ShowLateArrivals = false;
+        ShowEarlyDepartures = false;
+        ShowMissingAlcotest = false;
+        IsDashboardView = false;
+    }
+
+    [RelayCommand]
+    private void DrillDownLate()
+    {
+        ShowEarlyDepartures = false;
+        ShowMissingAlcotest = false;
+        ShowLateArrivals = true;
+        IsDashboardView = false;
+    }
+
+    [RelayCommand]
+    private void DrillDownEarly()
+    {
+        ShowLateArrivals = false;
+        ShowMissingAlcotest = false;
+        ShowEarlyDepartures = true;
+        IsDashboardView = false;
+    }
+
+    [RelayCommand]
+    private void DrillDownCritical()
+    {
+        ShowLateArrivals = false;
+        ShowEarlyDepartures = false;
+        ShowMissingAlcotest = true;
+        IsDashboardView = false;
+    }
+
     public void Cleanup()
     {
         _autoImportService.DataImported -= OnAutoDataImported;

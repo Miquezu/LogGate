@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LogGate.Interfaces;
 using OpenAI.Chat;
@@ -65,8 +65,25 @@ namespace LogGate.ViewModels
             Messages.Add(new UiMessage
             {
                 IsUser = false,
-                Text = "Данные загружены. Доступен поиск по сотрудникам и датам (например: 'Опаздывал ли Городецкий?')."
+                Text = "Данные загружены. Выберите готовую подсказку ниже или задайте свой вопрос (например: 'Опаздывал ли Городецкий?')."
             });
+        }
+
+        public List<string> Suggestions { get; } =
+        [
+            "Кто чаще всех опаздывал за период?",
+            "Были ли сотрудники с температурой > 37.2°C?",
+            "Покажи нарушения по алкотестеру",
+            "Сводка нарушений по отделам",
+            "Кто уходил раньше окончания смены?"
+        ];
+
+        [RelayCommand]
+        private void ApplySuggestion(string? suggestion)
+        {
+            if (string.IsNullOrWhiteSpace(suggestion) || IsBusy) return;
+            InputText = suggestion;
+            _ = SendMessageAsync();
         }
 
         [RelayCommand]
