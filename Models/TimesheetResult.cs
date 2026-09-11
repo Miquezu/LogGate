@@ -1,12 +1,11 @@
-using System.Collections.Generic;
+namespace LogGate.Models;
 
-namespace LogGate.Models
+/// <summary>
+/// Результат комплексного расчёта табеля учёта рабочего времени сотрудника.
+/// </summary>
+public class TimesheetResult
 {
-    public class TimesheetResult
-    {
-        public List<DailyWorkRecord> DailyRecords { get; set; } = [];
-
-        public TimesheetSummary Summary { get; set; } = new();
-    }
+    public List<DailyWorkRecord> DailyRecords { get; set; } = [];
+    public TimesheetSummary Summary { get; set; } = new();
 }
 

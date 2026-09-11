@@ -5,20 +5,10 @@ namespace LogGate.Converters;
 
 public class InverseBooleanConverter : IValueConverter
 {
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-    {
-        if (value is bool b)
-            return !b;
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
+        value is bool b ? !b : false;
 
-        return false;
-    }
-
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-    {
-        if (value is bool b)
-            return !b;
-
-        return false;
-    }
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+        value is bool b ? !b : false;
 }
 

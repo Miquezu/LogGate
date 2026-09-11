@@ -1,9 +1,7 @@
-﻿using LogGate.Models;
+namespace LogGate.Interfaces;
 
-namespace LogGate.Interfaces
+public interface IFileParser
 {
-    public interface IFileParser
-    {
-        List<DataItem> Parse(string filePath);
-    }
+    List<DataItem> Parse(string filePath);
+}
 }

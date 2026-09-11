@@ -1,39 +1,33 @@
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 using LiveChartsCore;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Painting;
-using LogGate.Interfaces;
-using LogGate.Models;
 using LogGate.Services;
 using MaterialDesignThemes.Wpf;
 using SkiaSharp;
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Diagnostics;
 using System.Windows;
 
 namespace LogGate.ViewModels;
 
+/// <summary>
+/// Главная ViewModel приложения (управление журналами, фильтрация, дашборд, импорт/экспорт).
+/// </summary>
 public partial class MainViewModel : ObservableObject
 {
+    public const string AllDepartmentsPreset = "Все подразделения";
+
     public ISnackbarMessageQueue SnackbarMessageQueue => _dialogService.SnackbarMessageQueue;
 
-    private readonly AiReportManager _aiReportManager;
-    private readonly AutoImportService _autoImportService;
-    private readonly IDataCleaningService _cleaningService;
-    private readonly IDashboardService _dashboardService;
+    private readonly IDataImportService _dataImportService;
     private readonly IDataRepository _dataRepository;
     private readonly IDialogService _dialogService;
-    private readonly IExportService _exportService;
-    private readonly IFileParser _fileParser;
     private readonly IScheduleService _scheduleService;
-    private readonly ITimesheetService _timesheetService;
-    private readonly IPrintService _printService;
+    private readonly ICalendarService _calendarService;
+    private readonly IDashboardService _dashboardService;
+    private readonly IExportService _exportService;
+    private readonly AiReportManager _aiReportManager;
+    private readonly AutoImportService _autoImportService;
+    private readonly ILogger<MainViewModel>? _logger;
 
     private CancellationTokenSource? _filterCts;
     private List<DataItem> _filteredCache = [];
@@ -43,8 +37,6 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     private ObservableCollection<DataItem> _dataItems = [];
-
-    public const string AllDepartmentsPreset = "Все подразделения";
 
     [ObservableProperty]
     private ObservableCollection<string> _departments = [AllDepartmentsPreset];
@@ -163,29 +155,27 @@ public partial class MainViewModel : ObservableObject
     private Axis[] _departmentYAxes = [];
 
     public MainViewModel(
-        IFileParser fileParser,
-        IDataCleaningService cleaningService,
+        IDataImportService dataImportService,
         IDataRepository dataRepository,
         IDialogService dialogService,
-        AiReportManager aiReportManager,
         IScheduleService scheduleService,
-        AutoImportService autoImportService,
+        ICalendarService calendarService,
         IDashboardService dashboardService,
         IExportService exportService,
-        ITimesheetService timesheetService,
-        IPrintService printService)
+        AiReportManager aiReportManager,
+        AutoImportService autoImportService,
+        ILogger<MainViewModel>? logger = null)
     {
-        _fileParser = fileParser;
-        _cleaningService = cleaningService;
+        _dataImportService = dataImportService;
         _dataRepository = dataRepository;
         _dialogService = dialogService;
-        _aiReportManager = aiReportManager;
         _scheduleService = scheduleService;
-        _autoImportService = autoImportService;
+        _calendarService = calendarService;
         _dashboardService = dashboardService;
         _exportService = exportService;
-        _timesheetService = timesheetService;
-        _printService = printService;
+        _aiReportManager = aiReportManager;
+        _autoImportService = autoImportService;
+        _logger = logger;
 
         _autoImportService.DataImported += OnAutoDataImported;
         _autoImportService.ImportError += OnAutoImportError;
@@ -318,6 +308,7 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            _logger?.LogError(ex, "Ошибка при фильтрации и загрузке данных");
             StatusMessage = $"Ошибка загрузки: {ex.Message}";
         }
     }
@@ -388,14 +379,14 @@ public partial class MainViewModel : ObservableObject
         ];
 
         // 2. Круговая диаграмма нарушений
-        var pieSeriesList = new List<ISeries>();
+        List<ISeries> pieSeriesList = [];
         SKColor[] colors =
         [
-            SKColor.Parse("#F44336"), // Red
-            SKColor.Parse("#FF9800"), // Orange
-            SKColor.Parse("#9C27B0"), // Purple
-            SKColor.Parse("#E91E63"), // Pink
-            SKColor.Parse("#3F51B5")  // Indigo
+            SKColor.Parse("#F44336"),
+            SKColor.Parse("#FF9800"),
+            SKColor.Parse("#9C27B0"),
+            SKColor.Parse("#E91E63"),
+            SKColor.Parse("#3F51B5")
         ];
 
         int colorIdx = 0;
@@ -497,8 +488,7 @@ public partial class MainViewModel : ObservableObject
 
         if (cachedHolidays.Count == 0)
         {
-            var calendarService = new CalendarService();
-            cachedHolidays = await calendarService.GetPreHolidaysAsync(currentYear);
+            cachedHolidays = await _calendarService.GetPreHolidaysAsync(currentYear);
 
             if (cachedHolidays.Count > 0)
             {
@@ -519,7 +509,8 @@ public partial class MainViewModel : ObservableObject
 
             Departments.Clear();
             Departments.Add(AllDepartmentsPreset);
-            foreach (var dept in depts)
+
+            foreach (var dept in depts.OrderBy(d => d))
             {
                 Departments.Add(dept);
             }
@@ -535,7 +526,7 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error loading departments: {ex.Message}");
+            _logger?.LogError(ex, "Ошибка при загрузке подразделений");
         }
     }
 
@@ -546,26 +537,31 @@ public partial class MainViewModel : ObservableObject
         if (string.IsNullOrEmpty(selectedPath))
             return;
 
-        StatusMessage = $"Чтение файла: {Path.GetFileName(selectedPath)}...";
+        StatusMessage = $"Импорт файла: {Path.GetFileName(selectedPath)}...";
 
-        var rawData = _fileParser.Parse(selectedPath);
-        var cleanedData = _cleaningService.CleanAnomalies(rawData);
-
-        StatusMessage = "Сохранение записей в базу данных...";
-        int addedCount = await _dataRepository.SaveItemsAsync(cleanedData);
-
-        await LoadDataFromDatabaseAsync();
-        await LoadDepartmentsAsync();
-
-        if (addedCount > 0)
+        try
         {
-            StatusMessage = $"Загрузка завершена. Добавлено новых записей: {addedCount}.";
-            _dialogService.ShowMessage($"Успешно добавлено новых записей: {addedCount}");
+            int addedCount = await _dataImportService.ImportCsvAsync(selectedPath);
+
+            await LoadDataFromDatabaseAsync();
+            await LoadDepartmentsAsync();
+
+            if (addedCount > 0)
+            {
+                StatusMessage = $"Загрузка завершена. Добавлено новых записей: {addedCount}.";
+                _dialogService.ShowMessage($"Успешно добавлено новых записей: {addedCount}");
+            }
+            else
+            {
+                StatusMessage = "Загрузка завершена. Файл не содержал новых данных.";
+                _dialogService.ShowMessage("Все записи из этого файла уже есть в базе данных.");
+            }
         }
-        else
+        catch (Exception ex)
         {
-            StatusMessage = "Загрузка завершена. Файл не содержал новых данных.";
-            _dialogService.ShowMessage("Все записи из этого файла уже есть в базе данных.");
+            _logger?.LogError(ex, "Ошибка при загрузке CSV файла {SelectedPath}", selectedPath);
+            StatusMessage = "Ошибка при загрузке файла!";
+            _dialogService.ShowError($"Не удалось загрузить файл:\n{ex.Message}");
         }
     }
 
@@ -596,13 +592,17 @@ public partial class MainViewModel : ObservableObject
                 {
                     try
                     {
-                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", $"/select,\"{filePath}\"") { UseShellExecute = true });
+                        Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{filePath}\"") { UseShellExecute = true });
                     }
-                    catch { }
+                    catch (Exception ex)
+                    {
+                        _logger?.LogWarning(ex, "Не удалось открыть проводник для {FilePath}", filePath);
+                    }
                 });
         }
         catch (Exception ex)
         {
+            _logger?.LogError(ex, "Ошибка при экспорте данных");
             StatusMessage = "Ошибка при экспорте данных!";
             _dialogService.ShowError($"Не удалось экспортировать данные:\n{ex.Message}");
         }
@@ -665,39 +665,16 @@ public partial class MainViewModel : ObservableObject
 
         var today = DateTime.Today;
 
-        switch (value)
+        (StartDate, EndDate) = value switch
         {
-            case "Сегодня":
-                StartDate = today;
-                EndDate = today;
-                break;
-
-            case "Вчера":
-                StartDate = today.AddDays(-1);
-                EndDate = today.AddDays(-1);
-                break;
-
-            case "За 7 дней":
-                StartDate = today.AddDays(-7);
-                EndDate = today;
-                break;
-
-            case "Этот месяц":
-                StartDate = new DateTime(today.Year, today.Month, 1);
-                EndDate = today;
-                break;
-
-            case "Прошлый месяц":
-                var firstDayOfThisMonth = new DateTime(today.Year, today.Month, 1);
-                StartDate = firstDayOfThisMonth.AddMonths(-1);
-                EndDate = firstDayOfThisMonth.AddDays(-1);
-                break;
-
-            case "Сначала года":
-                StartDate = new DateTime(today.Year, 1, 1);
-                EndDate = today;
-                break;
-        }
+            "Сегодня" => (today, today),
+            "Вчера" => (today.AddDays(-1), today.AddDays(-1)),
+            "За 7 дней" => (today.AddDays(-7), today),
+            "Этот месяц" => (new DateTime(today.Year, today.Month, 1), today),
+            "Прошлый месяц" => (new DateTime(today.Year, today.Month, 1).AddMonths(-1), new DateTime(today.Year, today.Month, 1).AddDays(-1)),
+            "Сначала года" => (new DateTime(today.Year, 1, 1), today),
+            _ => (StartDate, EndDate)
+        };
     }
 
     partial void OnSelectedDepartmentChanged(string value) => RequestDataRefresh(resetPage: true);
@@ -717,25 +694,16 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void OpenEmployeeCard()
     {
-        if (SelectedItem == null || string.IsNullOrEmpty(SelectedItem.FullName))
+        if (SelectedItem is null || string.IsNullOrWhiteSpace(SelectedItem.FullName))
             return;
 
-        var cardViewModel = new EmployeeCardViewModel(
-            SelectedItem.FullName,
-            _dataRepository,
-            _scheduleService,
-            _timesheetService,
-            _exportService,
-            _dialogService,
-            _printService);
-        _dialogService.OpenEmployeeCard(cardViewModel);
+        _dialogService.OpenEmployeeCard(SelectedItem.FullName);
     }
 
     [RelayCommand]
     private void OpenScheduleSettings()
     {
-        var settingsViewModel = new ScheduleSettingsViewModel(_dataRepository, _dialogService, _scheduleService);
-        _dialogService.OpenScheduleSettings(settingsViewModel);
+        _dialogService.OpenScheduleSettings();
         RequestDataRefresh(resetPage: false);
     }
 
@@ -781,6 +749,7 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            _logger?.LogError(ex, "Ошибка при сохранении заметок");
             StatusMessage = "Ошибка при сохранении данных!";
             _dialogService.ShowError($"Ошибка сохранения:\n{ex.Message}");
         }
@@ -792,4 +761,5 @@ public partial class MainViewModel : ObservableObject
         var pagedData = sorted.Skip((CurrentPage - 1) * PageSize).Take(PageSize).ToList();
         DataItems = [.. pagedData];
     }
+}
 }

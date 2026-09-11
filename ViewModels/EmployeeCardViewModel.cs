@@ -1,213 +1,223 @@
-using CommunityToolkit.Mvvm.ComponentModel;
-using LogGate.Interfaces;
-using LogGate.Models;
-using System.Collections.ObjectModel;
+using MaterialDesignThemes.Wpf;
+using System.Diagnostics;
 
-namespace LogGate.ViewModels
+namespace LogGate.ViewModels;
+
+/// <summary>
+/// ViewModel персональной карточки сотрудника (досье, дисциплинарные показатели, табель учета рабочего времени).
+/// </summary>
+public partial class EmployeeCardViewModel : ObservableObject
 {
-    public partial class EmployeeCardViewModel : ObservableObject
+    private readonly string _employeeName;
+    private readonly IDataRepository _dataRepository;
+    private readonly IScheduleService? _scheduleService;
+    private readonly ITimesheetService _timesheetService;
+    private readonly IExportService _exportService;
+    private readonly IDialogService? _dialogService;
+    private readonly IPrintService _printService;
+    private readonly ILogger<EmployeeCardViewModel>? _logger;
+
+    public ISnackbarMessageQueue SnackbarMessageQueue { get; } = new SnackbarMessageQueue(TimeSpan.FromSeconds(3.5));
+
+    [ObservableProperty]
+    private ObservableCollection<DataItem> _employeeHistory = [];
+
+    [ObservableProperty]
+    private ObservableCollection<DailyWorkRecord> _dailyRecords = [];
+
+    [ObservableProperty]
+    private TimesheetSummary _timesheetSummary = new();
+
+    [ObservableProperty]
+    private bool _isTimesheetView;
+
+    [ObservableProperty]
+    private int _totalWorkDays;
+
+    [ObservableProperty]
+    private int _totalRecords;
+
+    [ObservableProperty]
+    private string _windowTitle;
+
+    // Данные профиля сотрудника
+    [ObservableProperty]
+    private string _fullName = string.Empty;
+
+    [ObservableProperty]
+    private string _initials = "??";
+
+    [ObservableProperty]
+    private string _department = "—";
+
+    [ObservableProperty]
+    private string _position = "—";
+
+    [ObservableProperty]
+    private string _employeeNumber = "—";
+
+    [ObservableProperty]
+    private string _passNumber = "—";
+
+    // Статус нахождения на объекте
+    [ObservableProperty]
+    private bool _isInside;
+
+    [ObservableProperty]
+    private string _statusText = "Загрузка...";
+
+    [ObservableProperty]
+    private string _statusDetail = string.Empty;
+
+    // Дисциплинарные и медицинские KPI метрики
+    [ObservableProperty]
+    private string _punctualityRate = "100%";
+
+    [ObservableProperty]
+    private int _lateCount;
+
+    [ObservableProperty]
+    private int _earlyCount;
+
+    [ObservableProperty]
+    private string _averageTemperature = "—";
+
+    [ObservableProperty]
+    private int _alcotestCheckedCount;
+
+    [ObservableProperty]
+    private int _alcotestViolationsCount;
+
+    public EmployeeCardViewModel(
+        string employeeName,
+        IDataRepository dataRepository,
+        IScheduleService? scheduleService = null,
+        ITimesheetService? timesheetService = null,
+        IExportService? exportService = null,
+        IDialogService? dialogService = null,
+        IPrintService? printService = null,
+        ILogger<EmployeeCardViewModel>? logger = null)
     {
-        private readonly IDataRepository _dataRepository;
-        private readonly IScheduleService? _scheduleService;
-        private readonly ITimesheetService _timesheetService;
-        private readonly IExportService? _exportService;
-        private readonly IDialogService? _dialogService;
-        private readonly IPrintService? _printService;
-        private readonly string _employeeName;
+        _employeeName = employeeName;
+        _dataRepository = dataRepository;
+        _scheduleService = scheduleService;
+        _timesheetService = timesheetService ?? new Services.TimesheetService();
+        _exportService = exportService ?? new Services.CsvExportService();
+        _dialogService = dialogService;
+        _printService = printService ?? new Services.PrintService();
+        _logger = logger;
 
-        [ObservableProperty]
-        private ObservableCollection<DataItem> _employeeHistory = [];
+        FullName = employeeName;
+        Initials = GetInitials(employeeName);
+        WindowTitle = $"Профиль сотрудника: {_employeeName}";
 
-        [ObservableProperty]
-        private ObservableCollection<DailyWorkRecord> _dailyRecords = [];
+        _ = LoadEmployeeDataAsync();
+    }
 
-        [ObservableProperty]
-        private TimesheetSummary _timesheetSummary = new();
+    [RelayCommand]
+    private void SwitchToHistory() => IsTimesheetView = false;
 
-        [ObservableProperty]
-        private bool _isTimesheetView;
+    [RelayCommand]
+    private void SwitchToTimesheet() => IsTimesheetView = true;
 
-        [ObservableProperty]
-        private int _totalWorkDays;
-
-        [ObservableProperty]
-        private int _totalRecords;
-
-        [ObservableProperty]
-        private string _windowTitle;
-
-        // Данные профиля сотрудника
-        [ObservableProperty]
-        private string _fullName = string.Empty;
-
-        [ObservableProperty]
-        private string _initials = "??";
-
-        [ObservableProperty]
-        private string _department = "—";
-
-        [ObservableProperty]
-        private string _position = "—";
-
-        [ObservableProperty]
-        private string _employeeNumber = "—";
-
-        [ObservableProperty]
-        private string _passNumber = "—";
-
-        // Статус нахождения на объекте
-        [ObservableProperty]
-        private bool _isInside;
-
-        [ObservableProperty]
-        private string _statusText = "Загрузка...";
-
-        [ObservableProperty]
-        private string _statusDetail = string.Empty;
-
-        // Дисциплинарные и медицинские KPI метрики
-        [ObservableProperty]
-        private string _punctualityRate = "100%";
-
-        [ObservableProperty]
-        private int _lateCount;
-
-        [ObservableProperty]
-        private int _earlyCount;
-
-        [ObservableProperty]
-        private string _averageTemperature = "—";
-
-        [ObservableProperty]
-        private int _alcotestCheckedCount;
-
-        [ObservableProperty]
-        private int _alcotestViolationsCount;
-
-        public EmployeeCardViewModel(
-            string employeeName,
-            IDataRepository dataRepository,
-            IScheduleService? scheduleService = null,
-            ITimesheetService? timesheetService = null,
-            IExportService? exportService = null,
-            IDialogService? dialogService = null,
-            IPrintService? printService = null)
+    [RelayCommand]
+    private async Task ExportToCsvAsync()
+    {
+        if (DailyRecords.Count == 0 && EmployeeHistory.Count == 0)
         {
-            _employeeName = employeeName;
-            _dataRepository = dataRepository;
-            _scheduleService = scheduleService;
-            _timesheetService = timesheetService ?? new Services.TimesheetService();
-            _exportService = exportService;
-            _dialogService = dialogService;
-            _printService = printService ?? new Services.PrintService();
-
-            FullName = employeeName;
-            Initials = GetInitials(employeeName);
-            WindowTitle = $"Профиль сотрудника: {_employeeName}";
-
-            LoadEmployeeData();
+            SnackbarMessageQueue.Enqueue("Нет данных для экспорта по данному сотруднику.");
+            return;
         }
 
-        public MaterialDesignThemes.Wpf.ISnackbarMessageQueue SnackbarMessageQueue { get; } = new MaterialDesignThemes.Wpf.SnackbarMessageQueue(System.TimeSpan.FromSeconds(3.5));
+        string safeName = string.Join("_", FullName.Split(Path.GetInvalidFileNameChars()));
+        string defaultFileName = $"Табель_{safeName}_{DateTime.Now:yyyy-MM-dd}.csv";
 
-        [CommunityToolkit.Mvvm.Input.RelayCommand]
-        private void SwitchToHistory() => IsTimesheetView = false;
+        string? filePath = _dialogService?.SaveFileDialog(defaultFileName);
+        if (string.IsNullOrEmpty(filePath))
+            return;
 
-        [CommunityToolkit.Mvvm.Input.RelayCommand]
-        private void SwitchToTimesheet() => IsTimesheetView = true;
-
-        [CommunityToolkit.Mvvm.Input.RelayCommand]
-        private async System.Threading.Tasks.Task ExportToCsvAsync()
+        try
         {
-            if (DailyRecords.Count == 0 && EmployeeHistory.Count == 0)
-            {
-                SnackbarMessageQueue.Enqueue("Нет данных для экспорта по данному сотруднику.");
-                return;
-            }
+            await _exportService.ExportEmployeeTimesheetAsync(
+                FullName,
+                Department,
+                Position,
+                EmployeeNumber,
+                PunctualityRate,
+                TimesheetSummary,
+                DailyRecords,
+                filePath);
 
-            string safeName = string.Join("_", FullName.Split(System.IO.Path.GetInvalidFileNameChars()));
-            string defaultFileName = $"Табель_{safeName}_{System.DateTime.Now:yyyy-MM-dd}.csv";
-
-            string? filePath = _dialogService?.SaveFileDialog(defaultFileName);
-            if (string.IsNullOrEmpty(filePath))
-                return;
-
-            try
-            {
-                var export = _exportService ?? new Services.CsvExportService();
-                await export.ExportEmployeeTimesheetAsync(
-                    FullName,
-                    Department,
-                    Position,
-                    EmployeeNumber,
-                    PunctualityRate,
-                    TimesheetSummary,
-                    DailyRecords,
-                    filePath);
-
-                var fileName = System.IO.Path.GetFileName(filePath);
-                SnackbarMessageQueue.Enqueue(
-                    $"Табель успешно экспортирован: {fileName}",
-                    "ОТКРЫТЬ",
-                    () =>
-                    {
-                        try
-                        {
-                            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", $"/select,\"{filePath}\"") { UseShellExecute = true });
-                        }
-                        catch { }
-                    });
-            }
-            catch (System.Exception ex)
-            {
-                SnackbarMessageQueue.Enqueue($"Ошибка при экспорте: {ex.Message}");
-            }
-        }
-
-        [CommunityToolkit.Mvvm.Input.RelayCommand]
-        private void PrintDossier()
-        {
-            if (DailyRecords.Count == 0 && EmployeeHistory.Count == 0)
-            {
-                SnackbarMessageQueue.Enqueue("Нет данных для печати досье сотрудника.");
-                return;
-            }
-
-            try
-            {
-                var print = _printService ?? new Services.PrintService();
-                bool printed = print.PrintEmployeeDossier(
-                    FullName,
-                    Department,
-                    Position,
-                    EmployeeNumber,
-                    PunctualityRate,
-                    LateCount,
-                    EarlyCount,
-                    TimesheetSummary,
-                    DailyRecords);
-
-                if (printed)
+            string fileName = Path.GetFileName(filePath);
+            SnackbarMessageQueue.Enqueue(
+                $"Табель успешно экспортирован: {fileName}",
+                "ОТКРЫТЬ",
+                () =>
                 {
-                    SnackbarMessageQueue.Enqueue("Документ успешно отправлен на печать.");
-                }
-            }
-            catch (System.Exception ex)
-            {
-                SnackbarMessageQueue.Enqueue($"Ошибка при печати: {ex.Message}");
-            }
+                    try
+                    {
+                        Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{filePath}\"") { UseShellExecute = true });
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger?.LogWarning(ex, "Не удалось открыть проводник для {FilePath}", filePath);
+                    }
+                });
         }
-
-        private static string GetInitials(string name)
+        catch (Exception ex)
         {
-            if (string.IsNullOrWhiteSpace(name)) return "??";
-            var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length == 1)
-                return parts[0].Length > 0 ? parts[0][0].ToString().ToUpperInvariant() : "??";
-            return $"{parts[0][0]}{parts[1][0]}".ToUpperInvariant();
+            _logger?.LogError(ex, "Ошибка при экспорте табеля сотрудника {FullName}", FullName);
+            SnackbarMessageQueue.Enqueue($"Ошибка при экспорте: {ex.Message}");
+        }
+    }
+
+    [RelayCommand]
+    private void PrintDossier()
+    {
+        if (DailyRecords.Count == 0 && EmployeeHistory.Count == 0)
+        {
+            SnackbarMessageQueue.Enqueue("Нет данных для печати досье сотрудника.");
+            return;
         }
 
-        private async void LoadEmployeeData()
+        try
+        {
+            bool printed = _printService.PrintEmployeeDossier(
+                FullName,
+                Department,
+                Position,
+                EmployeeNumber,
+                PunctualityRate,
+                LateCount,
+                EarlyCount,
+                TimesheetSummary,
+                DailyRecords);
+
+            if (printed)
+            {
+                SnackbarMessageQueue.Enqueue("Документ успешно отправлен на печать.");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Ошибка при печати досье сотрудника {FullName}", FullName);
+            SnackbarMessageQueue.Enqueue($"Ошибка при печати: {ex.Message}");
+        }
+    }
+
+    private static string GetInitials(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "??";
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 1)
+            return parts[0].Length > 0 ? parts[0][0].ToString().ToUpperInvariant() : "??";
+        return $"{parts[0][0]}{parts[1][0]}".ToUpperInvariant();
+    }
+
+    [RelayCommand]
+    public async Task LoadEmployeeDataAsync()
+    {
+        try
         {
             var history = await _dataRepository.GetEmployeeHistoryAsync(_employeeName);
 
@@ -248,7 +258,7 @@ namespace LogGate.ViewModels
 
             // Температура
             var tempItems = sorted.Where(x => x.Temperature.HasValue && x.Temperature.Value > 0).ToList();
-            AverageTemperature = tempItems.Any()
+            AverageTemperature = tempItems.Count > 0
                 ? $"{tempItems.Average(x => x.Temperature!.Value):F1} °C"
                 : "—";
 
@@ -293,5 +303,11 @@ namespace LogGate.ViewModels
                 EmployeeHistory.Add(item);
             }
         }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Ошибка при загрузке данных сотрудника {EmployeeName}", _employeeName);
+            SnackbarMessageQueue.Enqueue($"Ошибка загрузки данных сотрудника: {ex.Message}");
+        }
     }
+}
 }

@@ -1,12 +1,9 @@
-﻿using OpenAI.Chat;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
+using OpenAI.Chat;
 
-namespace LogGate.Interfaces
+namespace LogGate.Interfaces;
+
+public interface IAiAnalyzerService
 {
-    public interface IAiAnalyzerService
-    {
-        Task<string> SendMessageAsync(List<ChatMessage> conversationHistory, CancellationToken cancellationToken = default);
-    }
+    Task<string> SendMessageAsync(List<ChatMessage> conversationHistory, CancellationToken cancellationToken = default);
+}
 }

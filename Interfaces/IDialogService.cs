@@ -1,29 +1,31 @@
 using LogGate.ViewModels;
 using MaterialDesignThemes.Wpf;
-using System;
 
-namespace LogGate.Interfaces
+namespace LogGate.Interfaces;
+
+/// <summary>
+/// Сервис управления диалоговыми окнами и уведомлениями интерфейса.
+/// </summary>
+public interface IDialogService
 {
-    public interface IDialogService
-    {
-        ISnackbarMessageQueue SnackbarMessageQueue { get; }
+    ISnackbarMessageQueue SnackbarMessageQueue { get; }
 
-        void OpenAiChat(AiChatViewModel viewModel);
+    void OpenAiChat(AiChatViewModel viewModel);
 
-        void OpenEmployeeCard(EmployeeCardViewModel viewModel);
+    void OpenEmployeeCard(string employeeName);
 
-        string? OpenFileDialog();
+    bool? OpenScheduleSettings();
 
-        string? SaveFileDialog(string defaultFileName, string filter = "CSV files (*.csv)|*.csv|All files (*.*)|*.*");
+    string? OpenFileDialog();
 
-        bool? OpenScheduleSettings(ScheduleSettingsViewModel viewModel);
+    string? SaveFileDialog(string defaultFileName, string filter = "CSV files (*.csv)|*.csv|All files (*.*)|*.*");
 
-        void ShowError(string message, string title = "Ошибка");
+    void ShowError(string message, string title = "Ошибка");
 
-        void ShowMessage(string message, string title = "Уведомление");
+    void ShowMessage(string message, string title = "Уведомление");
 
-        void ShowWarning(string message, string title = "Внимание");
+    void ShowWarning(string message, string title = "Внимание");
 
-        void ShowMessageWithAction(string message, string actionText, Action actionHandler);
-    }
+    void ShowMessageWithAction(string message, string actionText, Action actionHandler);
+}
 }

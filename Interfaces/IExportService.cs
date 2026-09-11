@@ -1,22 +1,17 @@
-using LogGate.Models;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+namespace LogGate.Interfaces;
 
-namespace LogGate.Interfaces
+public interface IExportService
 {
-    public interface IExportService
-    {
-        Task ExportToCsvAsync(IEnumerable<DataItem> items, string filePath);
+    Task ExportToCsvAsync(IEnumerable<DataItem> items, string filePath);
 
-        Task ExportEmployeeTimesheetAsync(
-            string employeeName,
-            string department,
-            string position,
-            string employeeNumber,
-            string punctualityRate,
-            TimesheetSummary summary,
-            IEnumerable<DailyWorkRecord> records,
-            string filePath);
-    }
+    Task ExportEmployeeTimesheetAsync(
+        string employeeName,
+        string department,
+        string position,
+        string employeeNumber,
+        string punctualityRate,
+        TimesheetSummary summary,
+        IEnumerable<DailyWorkRecord> records,
+        string filePath);
 }
 

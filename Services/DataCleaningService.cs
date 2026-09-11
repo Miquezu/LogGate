@@ -1,147 +1,144 @@
-using LogGate.Interfaces;
-using LogGate.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+namespace LogGate.Services;
 
-namespace LogGate.Services
+/// <summary>
+/// Интеллектуальный сервис очистки и коррекции аномалий сырых логов СКУД.
+/// </summary>
+public class DataCleaningService : IDataCleaningService
 {
-    public class DataCleaningService : IDataCleaningService
+    private const string DirectionIn = "Вход";
+    private const string DirectionOut = "Выход";
+    private const string NoteAutoEvening = "Автоисправление (вечер)";
+    private const string NoteAutoMorning = "Автоисправление (утро)";
+    private const string NoteMissingPass = "Аномалия СКУД: Пропущен проход";
+    private const string NoteTechCard = "Технический пропуск";
+    private const string SecurityDepartmentKeyword = "охраны";
+    private const string SecurityPositionKeyword = "контролер на";
+
+    public List<DataItem> CleanAnomalies(List<DataItem> rawItems)
     {
-        private const string DirectionIn = "Вход";
-        private const string DirectionOut = "Выход";
-        private const string NoteAutoEvening = "Автоисправление (вечер)";
-        private const string NoteAutoMorning = "Автоисправление (утро)";
-        private const string NoteMissingPass = "Аномалия СКУД: Пропущен проход";
-        private const string NoteTechCard = "Технический пропуск";
-        private const string SecurityDepartmentKeyword = "охраны";
-        private const string SecurityPositionKeyword = "контролер на";
+        List<DataItem> cleaned = [];
 
-        public List<DataItem> CleanAnomalies(List<DataItem> rawItems)
+        var validItems = rawItems
+            .Where(x => !string.IsNullOrWhiteSpace(x.FullName) && x.EventTime.HasValue)
+            .ToList();
+
+        var invalidItems = rawItems.Except(validItems).ToList();
+
+        var grouped = validItems
+            .OrderBy(x => x.EventTime)
+            .GroupBy(x => !string.IsNullOrWhiteSpace(x.EmployeeNumber) ? x.EmployeeNumber : x.FullName);
+
+        foreach (var group in grouped)
         {
-            var cleaned = new List<DataItem>();
+            var logs = group.OrderBy(x => x.EventTime).ToList();
+            List<DataItem> employeeCleaned = [];
 
-            var validItems = rawItems
-                .Where(x => !string.IsNullOrWhiteSpace(x.FullName) && x.EventTime.HasValue)
-                .ToList();
-
-            var invalidItems = rawItems.Except(validItems).ToList();
-
-            var grouped = validItems
-                .OrderBy(x => x.EventTime)
-                .GroupBy(x => !string.IsNullOrWhiteSpace(x.EmployeeNumber) ? x.EmployeeNumber : x.FullName);
-
-            foreach (var group in grouped)
+            for (int i = 0; i < logs.Count; i++)
             {
-                var logs = group.OrderBy(x => x.EventTime).ToList();
-                var employeeCleaned = new List<DataItem>();
+                var current = logs[i];
 
-                for (int i = 0; i < logs.Count; i++)
+                bool isSecurity = (current.Department != null && current.Department.Contains(SecurityDepartmentKeyword, StringComparison.OrdinalIgnoreCase)) ||
+                                  (current.Position != null && current.Position.Contains(SecurityPositionKeyword, StringComparison.OrdinalIgnoreCase));
+
+                bool isTechnicalCard = current.FullName is ['{', .., '}'];
+                if (isTechnicalCard && string.IsNullOrWhiteSpace(current.SystemNote))
                 {
-                    var current = logs[i];
+                    current.SystemNote = NoteTechCard;
+                }
 
-                    bool isSecurity = (current.Department != null && current.Department.Contains(SecurityDepartmentKeyword, StringComparison.OrdinalIgnoreCase)) ||
-                                      (current.Position != null && current.Position.Contains(SecurityPositionKeyword, StringComparison.OrdinalIgnoreCase));
+                if (employeeCleaned.Count > 0)
+                {
+                    var previous = employeeCleaned[^1];
+                    TimeSpan diff = current.EventTime!.Value - previous.EventTime!.Value;
 
-                    bool isTechnicalCard = current.FullName!.StartsWith('{') && current.FullName.EndsWith('}');
-                    if (isTechnicalCard && string.IsNullOrWhiteSpace(current.SystemNote))
+                    // Устранение аппаратного дребезга (< 20 секунд) со слиянием замеров
+                    if (diff.TotalSeconds is < 20 and >= 0)
                     {
-                        current.SystemNote = NoteTechCard;
-                    }
-
-                    if (employeeCleaned.Count > 0)
-                    {
-                        var previous = employeeCleaned.Last();
-                        TimeSpan diff = current.EventTime!.Value - previous.EventTime!.Value;
-
-                        // Устранение аппаратного дребезга (< 20 секунд) со слиянием замеров
-                        if (diff.TotalSeconds < 20 && diff.TotalSeconds >= 0)
+                        if (previous.Direction != current.Direction)
                         {
-                            if (previous.Direction != current.Direction)
+                            MergeMeasurements(current, previous);
+                            employeeCleaned.RemoveAt(employeeCleaned.Count - 1);
+                            employeeCleaned.Add(current);
+                            continue;
+                        }
+                        else
+                        {
+                            if (string.Equals(current.Direction, DirectionIn, StringComparison.OrdinalIgnoreCase))
+                            {
+                                MergeMeasurements(previous, current);
+                                continue;
+                            }
+
+                            if (string.Equals(current.Direction, DirectionOut, StringComparison.OrdinalIgnoreCase))
                             {
                                 MergeMeasurements(current, previous);
                                 employeeCleaned.RemoveAt(employeeCleaned.Count - 1);
                                 employeeCleaned.Add(current);
                                 continue;
                             }
-                            else
-                            {
-                                if (string.Equals(current.Direction, DirectionIn, StringComparison.OrdinalIgnoreCase))
-                                {
-                                    MergeMeasurements(previous, current);
-                                    continue;
-                                }
-
-                                if (string.Equals(current.Direction, DirectionOut, StringComparison.OrdinalIgnoreCase))
-                                {
-                                    MergeMeasurements(current, previous);
-                                    employeeCleaned.RemoveAt(employeeCleaned.Count - 1);
-                                    employeeCleaned.Add(current);
-                                    continue;
-                                }
-                            }
-                        }
-
-                        bool isFirstEventToday = previous.EventTime!.Value.Date != current.EventTime!.Value.Date;
-                        int hour = current.EventTime.Value.Hour;
-
-                        if (!isSecurity && !isTechnicalCard)
-                        {
-                            if (isFirstEventToday && string.Equals(current.Direction, DirectionOut, StringComparison.OrdinalIgnoreCase) && hour < 12)
-                            {
-                                current.Direction = DirectionIn;
-                                current.SystemNote = NoteAutoMorning;
-                            }
-                            else if (!isFirstEventToday &&
-                                     string.Equals(previous.Direction, DirectionIn, StringComparison.OrdinalIgnoreCase) &&
-                                     string.Equals(current.Direction, DirectionIn, StringComparison.OrdinalIgnoreCase) &&
-                                     hour >= 15)
-                            {
-                                current.Direction = DirectionOut;
-                                current.SystemNote = NoteAutoEvening;
-                            }
-                        }
-
-                        if (previous.Direction == current.Direction)
-                        {
-                            current.SystemNote = NoteMissingPass;
                         }
                     }
-                    else
+
+                    bool isFirstEventToday = previous.EventTime!.Value.Date != current.EventTime!.Value.Date;
+                    int hour = current.EventTime.Value.Hour;
+
+                    if (!isSecurity && !isTechnicalCard)
                     {
-                        // Первая запись конкретного сотрудника
-                        if (!isSecurity && !isTechnicalCard &&
-                            string.Equals(current.Direction, DirectionOut, StringComparison.OrdinalIgnoreCase) &&
-                            current.EventTime!.Value.Hour < 12)
+                        if (isFirstEventToday && string.Equals(current.Direction, DirectionOut, StringComparison.OrdinalIgnoreCase) && hour < 12)
                         {
                             current.Direction = DirectionIn;
                             current.SystemNote = NoteAutoMorning;
                         }
+                        else if (!isFirstEventToday &&
+                                 string.Equals(previous.Direction, DirectionIn, StringComparison.OrdinalIgnoreCase) &&
+                                 string.Equals(current.Direction, DirectionIn, StringComparison.OrdinalIgnoreCase) &&
+                                 hour >= 15)
+                        {
+                            current.Direction = DirectionOut;
+                            current.SystemNote = NoteAutoEvening;
+                        }
                     }
 
-                    employeeCleaned.Add(current);
+                    if (previous.Direction == current.Direction)
+                    {
+                        current.SystemNote = NoteMissingPass;
+                    }
+                }
+                else
+                {
+                    // Первая запись конкретного сотрудника
+                    if (!isSecurity && !isTechnicalCard &&
+                        string.Equals(current.Direction, DirectionOut, StringComparison.OrdinalIgnoreCase) &&
+                        current.EventTime!.Value.Hour < 12)
+                    {
+                        current.Direction = DirectionIn;
+                        current.SystemNote = NoteAutoMorning;
+                    }
                 }
 
-                cleaned.AddRange(employeeCleaned);
+                employeeCleaned.Add(current);
             }
 
-            cleaned.AddRange(invalidItems);
-            return cleaned.OrderBy(x => x.EventTime).ToList();
+            cleaned.AddRange(employeeCleaned);
         }
 
-        private static void MergeMeasurements(DataItem target, DataItem source)
-        {
-            if (!target.Temperature.HasValue && source.Temperature.HasValue)
-            {
-                target.Temperature = source.Temperature;
-                target.TemperatureTime = source.TemperatureTime;
-            }
+        cleaned.AddRange(invalidItems);
+        return [.. cleaned.OrderBy(x => x.EventTime)];
+    }
 
-            if (!target.AlcotestResult.HasValue && source.AlcotestResult.HasValue)
-            {
-                target.AlcotestResult = source.AlcotestResult;
-                target.AlcotestTime = source.AlcotestTime;
-            }
+    private static void MergeMeasurements(DataItem target, DataItem source)
+    {
+        if (!target.Temperature.HasValue && source.Temperature.HasValue)
+        {
+            target.Temperature = source.Temperature;
+            target.TemperatureTime = source.TemperatureTime;
+        }
+
+        if (!target.AlcotestResult.HasValue && source.AlcotestResult.HasValue)
+        {
+            target.AlcotestResult = source.AlcotestResult;
+            target.AlcotestTime = source.AlcotestTime;
         }
     }
+}
 }

@@ -1,151 +1,149 @@
-﻿using LogGate.Interfaces;
-using System;
-using System.IO;
 using System.Threading.Channels;
-using System.Threading.Tasks;
 
-namespace LogGate.Services
+namespace LogGate.Services;
+
+/// <summary>
+/// Фоновый сервис автоматического импорта файлов CSV из каталога AutoImport.
+/// </summary>
+public class AutoImportService : IDisposable
 {
-    public class AutoImportService : IDisposable
+    private readonly IDataImportService _dataImportService;
+    private readonly ILogger<AutoImportService>? _logger;
+    private readonly string _importPath;
+    private readonly string _archivePath;
+    private readonly string _errorPath;
+    private readonly CancellationTokenSource _cts = new();
+    private readonly Channel<string> _fileQueue = Channel.CreateUnbounded<string>(
+        new UnboundedChannelOptions { SingleReader = true });
+    private readonly FileSystemWatcher _watcher;
+
+    public AutoImportService(
+        IDataImportService dataImportService,
+        ILogger<AutoImportService>? logger = null)
     {
-        private readonly string _archivePath;
-        private readonly IDataCleaningService _cleaningService;
-        private readonly CancellationTokenSource _cts = new();
-        private readonly IDataRepository _dataRepository;
-        private readonly string _errorPath;
-        private readonly IFileParser _fileParser;
+        _dataImportService = dataImportService;
+        _logger = logger;
 
-        private readonly Channel<string> _fileQueue = Channel.CreateUnbounded<string>(
-            new UnboundedChannelOptions { SingleReader = true });
+        _importPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "AutoImport");
+        _archivePath = Path.Combine(_importPath, "Archive");
+        _errorPath = Path.Combine(_importPath, "Errors");
 
-        private readonly string _importPath;
-        private readonly FileSystemWatcher _watcher;
+        Directory.CreateDirectory(_importPath);
+        Directory.CreateDirectory(_archivePath);
+        Directory.CreateDirectory(_errorPath);
 
-        public AutoImportService(IFileParser fileParser, IDataCleaningService cleaningService, IDataRepository dataRepository)
+        // Запуск последовательного фонового обработчика очереди
+        Task.Run(() => ProcessQueueAsync(_cts.Token));
+
+        // Постановка уже существующих файлов в очередь
+        string[] existingFiles = Directory.GetFiles(_importPath, "*.csv");
+        foreach (var file in existingFiles)
         {
-            _fileParser = fileParser;
-            _cleaningService = cleaningService;
-            _dataRepository = dataRepository;
-
-            _importPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "AutoImport");
-            _archivePath = Path.Combine(_importPath, "Archive");
-            _errorPath = Path.Combine(_importPath, "Errors");
-
-            Directory.CreateDirectory(_importPath);
-            Directory.CreateDirectory(_archivePath);
-            Directory.CreateDirectory(_errorPath);
-
-            // Запуск последовательного обработчика очереди
-            Task.Run(() => ProcessQueueAsync(_cts.Token));
-
-            // Постановка уже существующих файлов в очередь
-            string[] existingFiles = Directory.GetFiles(_importPath, "*.csv");
-            foreach (var file in existingFiles)
-            {
-                _fileQueue.Writer.TryWrite(file);
-            }
-
-            _watcher = new FileSystemWatcher(_importPath, "*.csv")
-            {
-                NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite,
-                EnableRaisingEvents = true
-            };
-
-            _watcher.Created += (s, e) => _fileQueue.Writer.TryWrite(e.FullPath);
+            _fileQueue.Writer.TryWrite(file);
         }
 
-        public event Action<int>? DataImported;
-
-        public event Action<string>? ImportError;
-
-        public event Action<string>? ImportStarted;
-
-        public void Dispose()
+        _watcher = new FileSystemWatcher(_importPath, "*.csv")
         {
-            _cts.Cancel();
-            _watcher?.Dispose();
-            _cts.Dispose();
+            NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite,
+            EnableRaisingEvents = true
+        };
+
+        _watcher.Created += (s, e) => _fileQueue.Writer.TryWrite(e.FullPath);
+    }
+
+    public event Action<int>? DataImported;
+    public event Action<string>? ImportError;
+    public event Action<string>? ImportStarted;
+
+    public void Dispose()
+    {
+        _cts.Cancel();
+        _watcher.Dispose();
+        _cts.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    private void MoveFileToFolder(string sourcePath, string targetDir, string fileName)
+    {
+        try
+        {
+            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss_");
+            string destinationPath = Path.Combine(targetDir, timestamp + fileName);
+            File.Move(sourcePath, destinationPath, overwrite: true);
         }
-
-        private static void MoveFileToFolder(string sourcePath, string targetDir, string fileName)
+        catch (Exception ex)
         {
-            try
-            {
-                string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss_");
-                string destinationPath = Path.Combine(targetDir, timestamp + fileName);
-                File.Move(sourcePath, destinationPath, overwrite: true);
-            }
-            catch
-            {
-                // Исключение повторных сбоев при ошибке файловой системы
-            }
+            _logger?.LogWarning(ex, "Не удалось переместить файл {FileName} в {TargetDir}", fileName, targetDir);
         }
+    }
 
-        private async Task ProcessQueueAsync(CancellationToken ct)
+    private async Task ProcessQueueAsync(CancellationToken ct)
+    {
+        var reader = _fileQueue.Reader;
+
+        while (await reader.WaitToReadAsync(ct))
         {
-            var reader = _fileQueue.Reader;
-
-            while (await reader.WaitToReadAsync(ct))
+            while (reader.TryRead(out var filePath))
             {
-                while (reader.TryRead(out var filePath))
-                {
-                    if (ct.IsCancellationRequested) break;
-                    if (!File.Exists(filePath)) continue;
+                if (ct.IsCancellationRequested) break;
+                if (!File.Exists(filePath)) continue;
 
-                    await ProcessSingleFileAsync(filePath);
-                }
-            }
-        }
-
-        private async Task ProcessSingleFileAsync(string filePath)
-        {
-            string fileName = Path.GetFileName(filePath);
-            ImportStarted?.Invoke(fileName);
-
-            const int maxRetries = 10;
-            const int delayMs = 500;
-            bool isFileReady = false;
-
-            for (int i = 0; i < maxRetries; i++)
-            {
-                try
-                {
-                    using (var stream = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.None))
-                    {
-                        isFileReady = true;
-                        break;
-                    }
-                }
-                catch (IOException)
-                {
-                    await Task.Delay(delayMs);
-                }
-            }
-
-            if (!isFileReady)
-            {
-                ImportError?.Invoke($"Файл {fileName} заблокирован другим процессом.");
-                MoveFileToFolder(filePath, _errorPath, fileName);
-                return;
-            }
-
-            try
-            {
-                var rawData = _fileParser.Parse(filePath);
-                var cleanedData = _cleaningService.CleanAnomalies(rawData);
-
-                int addedCount = await _dataRepository.SaveItemsAsync(cleanedData);
-
-                if (addedCount > 0)
-                    DataImported?.Invoke(addedCount);
-
-                MoveFileToFolder(filePath, _archivePath, fileName);
-            }
-            catch (Exception ex)
-            {
-                ImportError?.Invoke($"Ошибка автоимпорта файла {fileName}:\n{ex.Message}");
-                MoveFileToFolder(filePath, _errorPath, fileName);
+                await ProcessSingleFileAsync(filePath, ct);
             }
         }
     }
+
+    private async Task ProcessSingleFileAsync(string filePath, CancellationToken ct)
+    {
+        string fileName = Path.GetFileName(filePath);
+        ImportStarted?.Invoke(fileName);
+        _logger?.LogInformation("Обнаружен новый файл для автоимпорта: {FileName}", fileName);
+
+        const int maxRetries = 10;
+        const int delayMs = 500;
+        bool isFileReady = false;
+
+        for (int i = 0; i < maxRetries; i++)
+        {
+            try
+            {
+                using var stream = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.None);
+                isFileReady = true;
+                break;
+            }
+            catch (IOException)
+            {
+                await Task.Delay(delayMs, ct);
+            }
+        }
+
+        if (!isFileReady)
+        {
+            string msg = $"Файл {fileName} заблокирован другим процессом.";
+            _logger?.LogWarning(msg);
+            ImportError?.Invoke(msg);
+            MoveFileToFolder(filePath, _errorPath, fileName);
+            return;
+        }
+
+        try
+        {
+            int addedCount = await _dataImportService.ImportCsvAsync(filePath, ct);
+
+            if (addedCount > 0)
+            {
+                DataImported?.Invoke(addedCount);
+            }
+
+            MoveFileToFolder(filePath, _archivePath, fileName);
+            _logger?.LogInformation("Автоимпорт файла {FileName} успешно завершен ({AddedCount} новых записей).", fileName, addedCount);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Ошибка автоимпорта файла {FileName}", fileName);
+            ImportError?.Invoke($"Ошибка автоимпорта файла {fileName}:\n{ex.Message}");
+            MoveFileToFolder(filePath, _errorPath, fileName);
+        }
+    }
+}
 }

@@ -1,10 +1,7 @@
-﻿using LogGate.Models;
-using System.Collections.Generic;
+namespace LogGate.Interfaces;
 
-namespace LogGate.Interfaces
+public interface IDataCleaningService
 {
-    public interface IDataCleaningService
-    {
-        List<DataItem> CleanAnomalies(List<DataItem> rawItems);
-    }
+    List<DataItem> CleanAnomalies(List<DataItem> rawItems);
+}
 }

@@ -1,24 +1,20 @@
-﻿using LogGate.Models;
-using System;
-using System.Collections.Generic;
+namespace LogGate.Interfaces;
 
-namespace LogGate.Interfaces
+public interface IScheduleService
 {
-    public interface IScheduleService
-    {
-        List<DateTime> PreHolidays { get; }
-        List<WorkScheduleRule> Rules { get; }
+    List<DateTime> PreHolidays { get; }
+    List<WorkScheduleRule> Rules { get; }
 
-        void EvaluateCompliance(IEnumerable<DataItem> items);
+    void EvaluateCompliance(IEnumerable<DataItem> items);
 
-        WorkScheduleRule? GetRuleFor(DataItem item);
+    WorkScheduleRule? GetRuleFor(DataItem item);
 
-        bool IsEarlyDeparture(DataItem x);
+    bool IsEarlyDeparture(DataItem x);
 
-        bool IsLate(DataItem x);
+    bool IsLate(DataItem x);
 
-        bool RequiresAlcotest(DataItem item);
+    bool RequiresAlcotest(DataItem item);
 
-        void UpdateRules(List<WorkScheduleRule> rules, List<DateTime> holidays);
-    }
+    void UpdateRules(List<WorkScheduleRule> rules, List<DateTime> holidays);
+}
 }

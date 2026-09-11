@@ -1,30 +1,25 @@
-using LogGate.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace LogGate.DataAccess
+namespace LogGate.DataAccess;
+
+internal class AppDBContext(DbContextOptions<AppDBContext> options) : DbContext(options)
 {
-    internal class AppDBContext : DbContext
+    public DbSet<DataItem> DataItems => Set<DataItem>();
+    public DbSet<ShortenedWorkDay> ShortenedWorkDays => Set<ShortenedWorkDay>();
+    public DbSet<WorkScheduleRule> WorkScheduleRules => Set<WorkScheduleRule>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        public AppDBContext(DbContextOptions<AppDBContext> options) : base(options)
-        {
-        }
+        base.OnModelCreating(modelBuilder);
 
-        public DbSet<DataItem> DataItems { get; set; }
-        public DbSet<ShortenedWorkDay> ShortenedWorkDays { get; set; }
-        public DbSet<WorkScheduleRule> WorkScheduleRules { get; set; }
+        modelBuilder.Entity<DataItem>()
+            .HasIndex(x => new { x.RecordNumber, x.EventTime });
 
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-        {
-            base.OnModelCreating(modelBuilder);
+        modelBuilder.Entity<DataItem>()
+            .HasIndex(x => x.EventTime);
 
-            modelBuilder.Entity<DataItem>()
-                .HasIndex(x => new { x.RecordNumber, x.EventTime });
-
-            modelBuilder.Entity<DataItem>()
-                .HasIndex(x => x.EventTime);
-
-            modelBuilder.Entity<DataItem>()
-                .HasIndex(x => new { x.FullName, x.EventTime });
-        }
+        modelBuilder.Entity<DataItem>()
+            .HasIndex(x => new { x.FullName, x.EventTime });
     }
+}
 }
