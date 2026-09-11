@@ -93,36 +93,56 @@ namespace LogGate.DataAccess
         public async Task<int> SaveItemsAsync(IEnumerable<DataItem> items)
         {
             var incomingList = items
-                .Where(x => !string.IsNullOrEmpty(x.RecordNumber) && x.EventTime.HasValue)
+                .Where(x => (!string.IsNullOrWhiteSpace(x.FullName) || !string.IsNullOrWhiteSpace(x.PassNumber)) && x.EventTime.HasValue)
                 .ToList();
 
             if (incomingList.Count == 0) return 0;
+
+            // Если в CSV отсутствовал или был пуст номер строки, проставляем его автоматически
+            int counter = 1;
+            foreach (var item in incomingList)
+            {
+                if (string.IsNullOrWhiteSpace(item.RecordNumber))
+                {
+                    item.RecordNumber = counter.ToString();
+                }
+                counter++;
+            }
 
             await using var context = await _contextFactory.CreateDbContextAsync();
 
             var minDate = incomingList.Min(x => x.EventTime!.Value);
             var maxDate = incomingList.Max(x => x.EventTime!.Value);
 
-            // Выборка ключей только в диапазоне дат входящего пакета вместо скачивания всей таблицы
+            // Выборка ключей по физическим данным события (ФИО, пропуск, время, направление)
             var existingKeys = await context.DataItems
                 .AsNoTracking()
                 .Where(x => x.EventTime >= minDate && x.EventTime <= maxDate)
-                .Select(x => new { x.RecordNumber, x.EventTime })
+                .Select(x => new { x.FullName, x.PassNumber, x.EventTime, x.Direction })
                 .ToListAsync();
 
             var existingHashSet = existingKeys
-                .Select(x => (x.RecordNumber, x.EventTime))
+                .Select(x => (x.FullName ?? string.Empty, x.PassNumber ?? string.Empty, x.EventTime, x.Direction ?? string.Empty))
                 .ToHashSet();
 
-            var filteredItems = incomingList
-                .Where(item => !existingHashSet.Contains((item.RecordNumber, item.EventTime)))
-                .ToList();
+            // Исключаем записи, которые уже есть в БД, а также дубликаты внутри самой входящей пачки
+            var uniqueItems = new List<DataItem>();
+            var seenInBatch = new HashSet<(string, string, DateTime?, string)>();
 
-            if (filteredItems.Count != 0)
+            foreach (var item in incomingList)
             {
-                await context.DataItems.AddRangeAsync(filteredItems);
+                var key = (item.FullName ?? string.Empty, item.PassNumber ?? string.Empty, item.EventTime, item.Direction ?? string.Empty);
+                if (!existingHashSet.Contains(key) && seenInBatch.Add(key))
+                {
+                    uniqueItems.Add(item);
+                }
+            }
+
+            if (uniqueItems.Count != 0)
+            {
+                await context.DataItems.AddRangeAsync(uniqueItems);
                 await context.SaveChangesAsync();
-                return filteredItems.Count;
+                return uniqueItems.Count;
             }
             return 0;
         }

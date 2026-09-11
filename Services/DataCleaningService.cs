@@ -54,7 +54,8 @@ namespace LogGate.Services
                         var previous = employeeCleaned.Last();
                         TimeSpan diff = current.EventTime!.Value - previous.EventTime!.Value;
 
-                        if (diff.TotalMinutes < 2)
+                        // Устранение аппаратного дребезга (< 20 секунд) со слиянием замеров
+                        if (diff.TotalSeconds < 20 && diff.TotalSeconds >= 0)
                         {
                             if (previous.Direction != current.Direction)
                             {
