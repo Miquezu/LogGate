@@ -33,7 +33,7 @@ namespace LogGate.DataAccess
                 .ToListAsync();
         }
 
-        public async Task<List<DataItem>> GetFilteredLogsAsync(string? searchText, DateTime? startDate, DateTime? endDate)
+        public async Task<List<DataItem>> GetFilteredLogsAsync(string? searchText, DateTime? startDate, DateTime? endDate, string? department = null)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
             var query = context.DataItems.AsNoTracking().AsQueryable();
@@ -48,6 +48,11 @@ namespace LogGate.DataAccess
                 );
             }
 
+            if (!string.IsNullOrWhiteSpace(department) && department != "Все подразделения")
+            {
+                query = query.Where(x => x.Department == department);
+            }
+
             if (startDate.HasValue)
                 query = query.Where(x => x.EventTime >= startDate.Value);
 
@@ -55,6 +60,18 @@ namespace LogGate.DataAccess
                 query = query.Where(x => x.EventTime <= endDate.Value.AddDays(1).AddTicks(-1));
 
             return await query.ToListAsync();
+        }
+
+        public async Task<List<string>> GetDepartmentsAsync()
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.DataItems
+                .AsNoTracking()
+                .Where(x => !string.IsNullOrEmpty(x.Department))
+                .Select(x => x.Department!)
+                .Distinct()
+                .OrderBy(x => x)
+                .ToListAsync();
         }
 
         public async Task<List<DateTime>> GetShortenedDaysByYearAsync(int year)

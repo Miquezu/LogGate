@@ -1,4 +1,4 @@
-﻿using LogGate.Interfaces;
+using LogGate.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,9 +26,9 @@ namespace LogGate.Services
             _aiService = aiService;
         }
 
-        public async Task GenerateReportAsync(string searchText, DateTime? startDate, DateTime? endDate)
+        public async Task GenerateReportAsync(string searchText, DateTime? startDate, DateTime? endDate, string? department = null)
         {
-            var fullData = await _dataRepository.GetFilteredLogsAsync(searchText, startDate, endDate);
+            var fullData = await _dataRepository.GetFilteredLogsAsync(searchText, startDate, endDate, department);
 
             if (fullData.Count == 0)
             {

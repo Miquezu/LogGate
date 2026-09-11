@@ -286,11 +286,21 @@
 
                         <DatePicker
                             Width="125"
+                            Margin="0,0,10,0"
                             materialDesign:HintAssist.Hint="По дату"
                             SelectedDate="{Binding EndDate}"
                             Style="{StaticResource MaterialDesignOutlinedDatePicker}"
                             FontSize="12"
                             Padding="6,6" />
+
+                        <ComboBox
+                            Width="180"
+                            materialDesign:HintAssist.Hint="Подразделение"
+                            ItemsSource="{Binding Departments}"
+                            SelectedItem="{Binding SelectedDepartment}"
+                            Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                            FontSize="12"
+                            Padding="8,6" />
                     </StackPanel>
 
                     <!-- Тонкий разделитель между датами и чипами -->

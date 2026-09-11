@@ -39,6 +39,14 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private ObservableCollection<DataItem> _dataItems = [];
 
+    public const string AllDepartmentsPreset = "Все подразделения";
+
+    [ObservableProperty]
+    private ObservableCollection<string> _departments = [AllDepartmentsPreset];
+
+    [ObservableProperty]
+    private string _selectedDepartment = AllDepartmentsPreset;
+
     [ObservableProperty]
     private DateTime? _endDate = DateTime.Today;
 
@@ -77,6 +85,7 @@ public partial class MainViewModel : ObservableObject
 
     public bool HasActiveFilters =>
         !string.IsNullOrWhiteSpace(SearchText) ||
+        (SelectedDepartment != AllDepartmentsPreset && !string.IsNullOrEmpty(SelectedDepartment)) ||
         ShowLateArrivals ||
         ShowEarlyDepartures ||
         ShowMissingAlcotest ||
@@ -174,6 +183,7 @@ public partial class MainViewModel : ObservableObject
         _autoImportService.ImportStarted += OnAutoImportStarted;
 
         _ = InitializeCalendarAsync();
+        _ = LoadDepartmentsAsync();
         LoadDataFromDatabase();
     }
 
@@ -260,7 +270,7 @@ public partial class MainViewModel : ObservableObject
 
             StatusMessage = "Загрузка и фильтрация данных...";
 
-            var rawData = await _dataRepository.GetFilteredLogsAsync(SearchText, StartDate, EndDate);
+            var rawData = await _dataRepository.GetFilteredLogsAsync(SearchText, StartDate, EndDate, SelectedDepartment);
             token.ThrowIfCancellationRequested();
 
             _scheduleService.EvaluateCompliance(rawData);
@@ -466,7 +476,7 @@ public partial class MainViewModel : ObservableObject
     private async Task GenerateAiReportAsync()
     {
         StatusMessage = "Сбор данных для анализа ИИ...";
-        await _aiReportManager.GenerateReportAsync(SearchText, StartDate, EndDate);
+        await _aiReportManager.GenerateReportAsync(SearchText, StartDate, EndDate, SelectedDepartment);
         StatusMessage = "Анализ завершен.";
     }
 
@@ -491,6 +501,35 @@ public partial class MainViewModel : ObservableObject
         _scheduleService.UpdateRules(workRules, cachedHolidays);
     }
 
+    public async Task LoadDepartmentsAsync()
+    {
+        try
+        {
+            var depts = await _dataRepository.GetDepartmentsAsync();
+            var currentSelection = SelectedDepartment;
+
+            Departments.Clear();
+            Departments.Add(AllDepartmentsPreset);
+            foreach (var dept in depts)
+            {
+                Departments.Add(dept);
+            }
+
+            if (Departments.Contains(currentSelection))
+            {
+                SelectedDepartment = currentSelection;
+            }
+            else
+            {
+                SelectedDepartment = AllDepartmentsPreset;
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error loading departments: {ex.Message}");
+        }
+    }
+
     [RelayCommand]
     private async Task LoadDataAsync()
     {
@@ -507,6 +546,7 @@ public partial class MainViewModel : ObservableObject
         int addedCount = await _dataRepository.SaveItemsAsync(cleanedData);
 
         await LoadDataFromDatabaseAsync();
+        await LoadDepartmentsAsync();
 
         if (addedCount > 0)
         {
@@ -571,6 +611,7 @@ public partial class MainViewModel : ObservableObject
         Application.Current.Dispatcher.Invoke(() =>
         {
             LoadDataFromDatabase();
+            _ = LoadDepartmentsAsync();
             StatusMessage = $"Готово (фоновый импорт: +{addedCount} записей)";
             _dialogService.ShowMessage($"Фоновый импорт завершен.\nДобавлено новых записей: {addedCount}");
         });
@@ -639,6 +680,8 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    partial void OnSelectedDepartmentChanged(string value) => RequestDataRefresh(resetPage: true);
+
     partial void OnShowEarlyDeparturesChanged(bool value) => RequestDataRefresh(resetPage: true);
 
     partial void OnShowLateArrivalsChanged(bool value) => RequestDataRefresh(resetPage: true);
@@ -687,6 +730,7 @@ public partial class MainViewModel : ObservableObject
         _filterCts?.Cancel();
 
         SearchText = string.Empty;
+        SelectedDepartment = AllDepartmentsPreset;
         StartDate = null;
         EndDate = null;
         SelectedDatePreset = null;

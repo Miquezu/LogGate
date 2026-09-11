@@ -1,4 +1,4 @@
-﻿using LogGate.Models;
+using LogGate.Models;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -11,7 +11,9 @@ namespace LogGate.Interfaces
 
         Task<List<DataItem>> GetEmployeeHistoryAsync(string employeeName);
 
-        Task<List<DataItem>> GetFilteredLogsAsync(string? searchText, DateTime? startDate, DateTime? endDate);
+        Task<List<DataItem>> GetFilteredLogsAsync(string? searchText, DateTime? startDate, DateTime? endDate, string? department = null);
+
+        Task<List<string>> GetDepartmentsAsync();
 
         Task<List<DateTime>> GetShortenedDaysByYearAsync(int year);
 
