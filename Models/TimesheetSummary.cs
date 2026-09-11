@@ -75,3 +75,4 @@ namespace LogGate.Models
         public int TotalAlcotestViolations { get; set; }
     }
 }
+

@@ -10,6 +10,9 @@ namespace LogGate.ViewModels
         private readonly IDataRepository _dataRepository;
         private readonly IScheduleService? _scheduleService;
         private readonly ITimesheetService _timesheetService;
+        private readonly IExportService? _exportService;
+        private readonly IDialogService? _dialogService;
+        private readonly IPrintService? _printService;
         private readonly string _employeeName;
 
         [ObservableProperty]
@@ -85,12 +88,18 @@ namespace LogGate.ViewModels
             string employeeName,
             IDataRepository dataRepository,
             IScheduleService? scheduleService = null,
-            ITimesheetService? timesheetService = null)
+            ITimesheetService? timesheetService = null,
+            IExportService? exportService = null,
+            IDialogService? dialogService = null,
+            IPrintService? printService = null)
         {
             _employeeName = employeeName;
             _dataRepository = dataRepository;
             _scheduleService = scheduleService;
             _timesheetService = timesheetService ?? new Services.TimesheetService();
+            _exportService = exportService;
+            _dialogService = dialogService;
+            _printService = printService ?? new Services.PrintService();
 
             FullName = employeeName;
             Initials = GetInitials(employeeName);
@@ -104,6 +113,77 @@ namespace LogGate.ViewModels
 
         [CommunityToolkit.Mvvm.Input.RelayCommand]
         private void SwitchToTimesheet() => IsTimesheetView = true;
+
+        [CommunityToolkit.Mvvm.Input.RelayCommand]
+        private async System.Threading.Tasks.Task ExportToCsvAsync()
+        {
+            if (DailyRecords.Count == 0 && EmployeeHistory.Count == 0)
+            {
+                _dialogService?.ShowWarning("Нет данных для экспорта по данному сотруднику.");
+                return;
+            }
+
+            string safeName = string.Join("_", FullName.Split(System.IO.Path.GetInvalidFileNameChars()));
+            string defaultFileName = $"Табель_{safeName}_{System.DateTime.Now:yyyy-MM-dd}.csv";
+
+            string? filePath = _dialogService?.SaveFileDialog(defaultFileName);
+            if (string.IsNullOrEmpty(filePath))
+                return;
+
+            try
+            {
+                var export = _exportService ?? new Services.CsvExportService();
+                await export.ExportEmployeeTimesheetAsync(
+                    FullName,
+                    Department,
+                    Position,
+                    EmployeeNumber,
+                    PunctualityRate,
+                    TimesheetSummary,
+                    DailyRecords,
+                    filePath);
+
+                _dialogService?.ShowMessage($"Табель сотрудника успешно экспортирован в файл:\n{System.IO.Path.GetFileName(filePath)}", "Экспорт завершён");
+            }
+            catch (System.Exception ex)
+            {
+                _dialogService?.ShowError($"Ошибка при экспорте табеля:\n{ex.Message}");
+            }
+        }
+
+        [CommunityToolkit.Mvvm.Input.RelayCommand]
+        private void PrintDossier()
+        {
+            if (DailyRecords.Count == 0 && EmployeeHistory.Count == 0)
+            {
+                _dialogService?.ShowWarning("Нет данных для печати досье сотрудника.");
+                return;
+            }
+
+            try
+            {
+                var print = _printService ?? new Services.PrintService();
+                bool printed = print.PrintEmployeeDossier(
+                    FullName,
+                    Department,
+                    Position,
+                    EmployeeNumber,
+                    PunctualityRate,
+                    LateCount,
+                    EarlyCount,
+                    TimesheetSummary,
+                    DailyRecords);
+
+                if (printed)
+                {
+                    _dialogService?.ShowMessage("Документ успешно отправлен на печать.", "Печать досье");
+                }
+            }
+            catch (System.Exception ex)
+            {
+                _dialogService?.ShowError($"Ошибка при отправке на печать:\n{ex.Message}");
+            }
+        }
 
         private static string GetInitials(string name)
         {

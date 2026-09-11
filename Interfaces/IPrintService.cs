@@ -1,22 +1,20 @@
 using LogGate.Models;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace LogGate.Interfaces
 {
-    public interface IExportService
+    public interface IPrintService
     {
-        Task ExportToCsvAsync(IEnumerable<DataItem> items, string filePath);
-
-        Task ExportEmployeeTimesheetAsync(
+        bool PrintEmployeeDossier(
             string employeeName,
             string department,
             string position,
             string employeeNumber,
             string punctualityRate,
+            int lateCount,
+            int earlyCount,
             TimesheetSummary summary,
-            IEnumerable<DailyWorkRecord> records,
-            string filePath);
+            IEnumerable<DailyWorkRecord> records);
     }
 }
 

@@ -9,3 +9,4 @@ namespace LogGate.Models
         public TimesheetSummary Summary { get; set; } = new();
     }
 }
+

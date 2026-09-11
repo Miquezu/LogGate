@@ -171,71 +171,118 @@
                     </WrapPanel>
                 </StackPanel>
 
-                <!-- Статус нахождения (На объекте / Вне объекта) -->
-                <Border
+                <!-- Статус нахождения и быстрые действия (Экспорт / Печать) -->
+                <StackPanel
                     Grid.Column="2"
-                    Padding="14,10"
                     VerticalAlignment="Center"
-                    BorderThickness="1"
-                    CornerRadius="8">
-                    <Border.Style>
-                        <Style TargetType="Border">
-                            <Setter Property="Background" Value="#ECEFF1" />
-                            <Setter Property="BorderBrush" Value="#CFD8DC" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsInside}" Value="True">
-                                    <Setter Property="Background" Value="#E8F5E9" />
-                                    <Setter Property="BorderBrush" Value="#A5D6A7" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Border.Style>
-                    <StackPanel HorizontalAlignment="Center">
-                        <StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
-                            <materialDesign:PackIcon
-                                Width="18"
-                                Height="18"
-                                Margin="0,0,6,0"
-                                VerticalAlignment="Center">
-                                <materialDesign:PackIcon.Style>
-                                    <Style TargetType="materialDesign:PackIcon">
-                                        <Setter Property="Kind" Value="DoorClosed" />
-                                        <Setter Property="Foreground" Value="#546E7A" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsInside}" Value="True">
-                                                <Setter Property="Kind" Value="CheckCircle" />
-                                                <Setter Property="Foreground" Value="#2E7D32" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </materialDesign:PackIcon.Style>
-                            </materialDesign:PackIcon>
+                    Orientation="Horizontal">
+
+                    <!-- Статус нахождения (На объекте / Вне объекта) -->
+                    <Border
+                        Margin="0,0,12,0"
+                        Padding="14,8"
+                        VerticalAlignment="Center"
+                        BorderThickness="1"
+                        CornerRadius="8">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Background" Value="#ECEFF1" />
+                                <Setter Property="BorderBrush" Value="#CFD8DC" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsInside}" Value="True">
+                                        <Setter Property="Background" Value="#E8F5E9" />
+                                        <Setter Property="BorderBrush" Value="#A5D6A7" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <StackPanel HorizontalAlignment="Center">
+                            <StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
+                                <materialDesign:PackIcon
+                                    Width="16"
+                                    Height="16"
+                                    Margin="0,0,5,0"
+                                    VerticalAlignment="Center">
+                                    <materialDesign:PackIcon.Style>
+                                        <Style TargetType="materialDesign:PackIcon">
+                                            <Setter Property="Kind" Value="DoorClosed" />
+                                            <Setter Property="Foreground" Value="#546E7A" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsInside}" Value="True">
+                                                    <Setter Property="Kind" Value="CheckCircle" />
+                                                    <Setter Property="Foreground" Value="#2E7D32" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </materialDesign:PackIcon.Style>
+                                </materialDesign:PackIcon>
+                                <TextBlock
+                                    VerticalAlignment="Center"
+                                    FontSize="12"
+                                    FontWeight="Bold">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Text" Value="Вне объекта" />
+                                            <Setter Property="Foreground" Value="#546E7A" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsInside}" Value="True">
+                                                    <Setter Property="Text" Value="На территории" />
+                                                    <Setter Property="Foreground" Value="#2E7D32" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </StackPanel>
                             <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="13"
-                                FontWeight="Bold">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Text" Value="Вне объекта" />
-                                        <Setter Property="Foreground" Value="#546E7A" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsInside}" Value="True">
-                                                <Setter Property="Text" Value="На территории" />
-                                                <Setter Property="Foreground" Value="#2E7D32" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
+                                Margin="0,2,0,0"
+                                HorizontalAlignment="Center"
+                                FontSize="10.5"
+                                Foreground="#757575"
+                                Text="{Binding StatusDetail}" />
                         </StackPanel>
-                        <TextBlock
-                            Margin="0,4,0,0"
-                            HorizontalAlignment="Center"
-                            FontSize="11"
-                            Foreground="#757575"
-                            Text="{Binding StatusDetail}" />
-                    </StackPanel>
-                </Border>
+                    </Border>
+
+                    <!-- Кнопка Экспорт в CSV -->
+                    <Button
+                        Margin="0,0,8,0"
+                        Height="36"
+                        Command="{Binding ExportToCsvCommand}"
+                        Style="{StaticResource MaterialDesignOutlinedButton}"
+                        BorderBrush="#5E35B1"
+                        Foreground="#5E35B1"
+                        ToolTip="Экспортировать табель и сводные показатели сотрудника в CSV-файл">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon
+                                Width="16"
+                                Height="16"
+                                Margin="0,0,6,0"
+                                VerticalAlignment="Center"
+                                Foreground="#5E35B1"
+                                Kind="FileExportOutline" />
+                            <TextBlock VerticalAlignment="Center" FontWeight="Medium" Text="Экспорт" />
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Кнопка Печать / PDF -->
+                    <Button
+                        Height="36"
+                        Command="{Binding PrintDossierCommand}"
+                        Style="{StaticResource MaterialDesignRaisedButton}"
+                        Background="#5E35B1"
+                        BorderBrush="#5E35B1"
+                        ToolTip="Распечатать или сохранить в PDF официальное досье и табель сотрудника">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon
+                                Width="16"
+                                Height="16"
+                                Margin="0,0,6,0"
+                                VerticalAlignment="Center"
+                                Kind="PrinterOutline" />
+                            <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="Печать" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
             </Grid>
         </materialDesign:Card>
 

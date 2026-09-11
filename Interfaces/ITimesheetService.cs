@@ -9,3 +9,4 @@ namespace LogGate.Interfaces
         TimesheetResult CalculateTimesheet(IEnumerable<DataItem> employeeEvents, WorkScheduleRule? rule, IEnumerable<DateTime>? preHolidays = null);
     }
 }
+

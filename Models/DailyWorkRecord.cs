@@ -105,3 +105,4 @@ namespace LogGate.Models
         }
     }
 }
+

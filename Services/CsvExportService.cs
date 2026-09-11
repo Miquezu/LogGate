@@ -52,6 +52,59 @@ namespace LogGate.Services
             await csv.WriteRecordsAsync(records);
         }
 
+        public async Task ExportEmployeeTimesheetAsync(
+            string employeeName,
+            string department,
+            string position,
+            string employeeNumber,
+            string punctualityRate,
+            TimesheetSummary summary,
+            IEnumerable<DailyWorkRecord> records,
+            string filePath)
+        {
+            var sb = new StringBuilder();
+
+            // Шапка отчёта
+            sb.AppendLine("Досье сотрудника и Табель учёта рабочего времени;");
+            sb.AppendLine($"ФИО:;{employeeName}");
+            sb.AppendLine($"Подразделение:;{department}");
+            sb.AppendLine($"Должность:;{position}");
+            sb.AppendLine($"Табельный номер:;{employeeNumber}");
+            sb.AppendLine($"Дата выгрузки:;{DateTime.Now:dd.MM.yyyy HH:mm}");
+            sb.AppendLine(";");
+
+            // Сводный блок
+            sb.AppendLine("СВОДНЫЕ ПОКАЗАТЕЛИ ЗА ПЕРИОД:;");
+            sb.AppendLine($"Отработано рабочих дней:;{summary.TotalWorkDays}");
+            sb.AppendLine($"Фактически отработано:;{summary.TotalWorkedTimeFormatted}");
+            sb.AppendLine($"Норма по графику:;{summary.TotalPlannedTimeFormatted}");
+            sb.AppendLine($"Баланс рабочего времени:;{summary.TotalBalanceFormatted}");
+            sb.AppendLine($"Средняя смена в день:;{summary.AverageHoursPerDayFormatted}");
+            sb.AppendLine($"Индекс соблюдения графика (пунктуальность):;{punctualityRate}");
+            sb.AppendLine($"Зафиксировано опозданий:;{summary.TotalLateCount}");
+            sb.AppendLine($"Зафиксировано ранних уходов:;{summary.TotalEarlyCount}");
+            sb.AppendLine($"Нарушений алкотеста:;{summary.TotalAlcotestViolations}");
+            sb.AppendLine(";");
+
+            // Таблица по дням
+            sb.AppendLine("ЕЖЕДНЕВНЫЙ ТАБЕЛЬ УЧЁТА ВРЕМЕНИ:;");
+            sb.AppendLine("№;Дата;День недели;Первый вход;Последний выход;Число проходов;Отработано;Норма;Баланс;Опоздание;Ранний уход;Алкотест;Статус");
+
+            int idx = 1;
+            foreach (var r in records)
+            {
+                string dayOfWeek = r.Date.ToString("dddd", new CultureInfo("ru-RU"));
+                string isLate = r.IsLate ? "Да" : "Нет";
+                string isEarly = r.IsEarlyDeparture ? "Да" : "Нет";
+                string hasAlco = r.HasAlcotestViolation ? "Да" : "Нет";
+
+                sb.AppendLine($"{idx++};{r.DateFormatted};{dayOfWeek};{r.FirstEntryFormatted};{r.LastExitFormatted};{r.PassesCount};{r.WorkedTimeFormatted};{r.PlannedTimeFormatted};{r.BalanceFormatted};{isLate};{isEarly};{hasAlco};{r.StatusText}");
+            }
+
+            await using var writer = new StreamWriter(filePath, false, new UTF8Encoding(true));
+            await writer.WriteAsync(sb.ToString());
+        }
+
         private sealed class ReportExportRecord
         {
             public int Number { get; set; }

@@ -53,6 +53,7 @@ namespace LogGate
                     services.AddTransient<AiReportManager>();
                     services.AddSingleton<IExportService, CsvExportService>();
                     services.AddSingleton<ITimesheetService, TimesheetService>();
+                    services.AddSingleton<IPrintService, PrintService>();
 
                     // 3. ViewModels и представления
                     services.AddTransient<MainViewModel>();
