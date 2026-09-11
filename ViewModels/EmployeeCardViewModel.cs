@@ -9,10 +9,23 @@ namespace LogGate.ViewModels
     {
         private readonly IDataRepository _dataRepository;
         private readonly IScheduleService? _scheduleService;
+        private readonly ITimesheetService _timesheetService;
         private readonly string _employeeName;
 
         [ObservableProperty]
         private ObservableCollection<DataItem> _employeeHistory = [];
+
+        [ObservableProperty]
+        private ObservableCollection<DailyWorkRecord> _dailyRecords = [];
+
+        [ObservableProperty]
+        private TimesheetSummary _timesheetSummary = new();
+
+        [ObservableProperty]
+        private bool _isTimesheetView;
+
+        [ObservableProperty]
+        private int _totalWorkDays;
 
         [ObservableProperty]
         private int _totalRecords;
@@ -68,11 +81,16 @@ namespace LogGate.ViewModels
         [ObservableProperty]
         private int _alcotestViolationsCount;
 
-        public EmployeeCardViewModel(string employeeName, IDataRepository dataRepository, IScheduleService? scheduleService = null)
+        public EmployeeCardViewModel(
+            string employeeName,
+            IDataRepository dataRepository,
+            IScheduleService? scheduleService = null,
+            ITimesheetService? timesheetService = null)
         {
             _employeeName = employeeName;
             _dataRepository = dataRepository;
             _scheduleService = scheduleService;
+            _timesheetService = timesheetService ?? new Services.TimesheetService();
 
             FullName = employeeName;
             Initials = GetInitials(employeeName);
@@ -80,6 +98,12 @@ namespace LogGate.ViewModels
 
             LoadEmployeeData();
         }
+
+        [CommunityToolkit.Mvvm.Input.RelayCommand]
+        private void SwitchToHistory() => IsTimesheetView = false;
+
+        [CommunityToolkit.Mvvm.Input.RelayCommand]
+        private void SwitchToTimesheet() => IsTimesheetView = true;
 
         private static string GetInitials(string name)
         {
@@ -155,6 +179,20 @@ namespace LogGate.ViewModels
             {
                 PunctualityRate = "100%";
             }
+
+            // Расчет табеля фактически отработанных часов
+            var firstWithDept = sorted.FirstOrDefault(x => !string.IsNullOrEmpty(x.Department));
+            var rule = _scheduleService?.GetRuleFor(firstWithDept ?? new DataItem { FullName = _employeeName });
+            var preHolidays = _scheduleService?.PreHolidays;
+
+            var timesheetResult = _timesheetService.CalculateTimesheet(sorted, rule, preHolidays);
+            DailyRecords.Clear();
+            foreach (var record in timesheetResult.DailyRecords)
+            {
+                DailyRecords.Add(record);
+            }
+            TimesheetSummary = timesheetResult.Summary;
+            TotalWorkDays = timesheetResult.Summary.TotalWorkDays;
 
             EmployeeHistory.Clear();
             foreach (var item in sorted)

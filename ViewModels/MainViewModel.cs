@@ -29,6 +29,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IExportService _exportService;
     private readonly IFileParser _fileParser;
     private readonly IScheduleService _scheduleService;
+    private readonly ITimesheetService _timesheetService;
 
     private CancellationTokenSource? _filterCts;
     private List<DataItem> _filteredCache = [];
@@ -166,7 +167,8 @@ public partial class MainViewModel : ObservableObject
         IScheduleService scheduleService,
         AutoImportService autoImportService,
         IDashboardService dashboardService,
-        IExportService exportService)
+        IExportService exportService,
+        ITimesheetService timesheetService)
     {
         _fileParser = fileParser;
         _cleaningService = cleaningService;
@@ -177,6 +179,7 @@ public partial class MainViewModel : ObservableObject
         _autoImportService = autoImportService;
         _dashboardService = dashboardService;
         _exportService = exportService;
+        _timesheetService = timesheetService;
 
         _autoImportService.DataImported += OnAutoDataImported;
         _autoImportService.ImportError += OnAutoImportError;
@@ -700,7 +703,7 @@ public partial class MainViewModel : ObservableObject
         if (SelectedItem == null || string.IsNullOrEmpty(SelectedItem.FullName))
             return;
 
-        var cardViewModel = new EmployeeCardViewModel(SelectedItem.FullName, _dataRepository, _scheduleService);
+        var cardViewModel = new EmployeeCardViewModel(SelectedItem.FullName, _dataRepository, _scheduleService, _timesheetService);
         _dialogService.OpenEmployeeCard(cardViewModel);
     }
 
