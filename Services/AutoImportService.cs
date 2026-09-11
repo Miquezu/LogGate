@@ -1,4 +1,4 @@
-using System.Threading.Channels;
+﻿using System.Threading.Channels;
 
 namespace LogGate.Services;
 
@@ -145,5 +145,4 @@ public class AutoImportService : IDisposable
             MoveFileToFolder(filePath, _errorPath, fileName);
         }
     }
-}
 }

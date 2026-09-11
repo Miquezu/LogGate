@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 
 namespace LogGate.Models;
 
@@ -41,5 +41,4 @@ public class DataItem
 
     [NotMapped]
     public bool HasDisciplineViolation => IsLate || IsEarlyDeparture;
-}
 }

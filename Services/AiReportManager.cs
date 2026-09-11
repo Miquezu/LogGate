@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 
 namespace LogGate.Services;
 
@@ -158,5 +158,4 @@ public class AiReportManager(
 
         dialogService.OpenAiChat(chatViewModel);
     }
-}
 }

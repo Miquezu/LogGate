@@ -1,4 +1,4 @@
-namespace LogGate.Models;
+﻿namespace LogGate.Models;
 
 /// <summary>
 /// Правило рабочего графика для подразделения или конкретного сотрудника.
@@ -11,5 +11,4 @@ public class WorkScheduleRule
     public TimeSpan StartTime { get; set; }
     public TimeSpan EndTime { get; set; }
     public bool RequiresAlcotest { get; set; }
-}
 }

@@ -1,4 +1,4 @@
-namespace LogGate.Interfaces;
+﻿namespace LogGate.Interfaces;
 
 public interface IScheduleService
 {
@@ -16,5 +16,4 @@ public interface IScheduleService
     bool RequiresAlcotest(DataItem item);
 
     void UpdateRules(List<WorkScheduleRule> rules, List<DateTime> holidays);
-}
 }

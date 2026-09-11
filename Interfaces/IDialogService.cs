@@ -1,4 +1,4 @@
-using LogGate.ViewModels;
+﻿using LogGate.ViewModels;
 using MaterialDesignThemes.Wpf;
 
 namespace LogGate.Interfaces;
@@ -27,5 +27,4 @@ public interface IDialogService
     void ShowWarning(string message, string title = "Внимание");
 
     void ShowMessageWithAction(string message, string actionText, Action actionHandler);
-}
 }

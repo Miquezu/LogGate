@@ -1,4 +1,4 @@
-using CsvHelper.Configuration;
+﻿using CsvHelper.Configuration;
 
 namespace LogGate.Models;
 
@@ -29,5 +29,4 @@ public sealed class DataItemMap : ClassMap<DataItem>
         Map(m => m.EmployeeNumber).Name("Таб.№");
         Map(m => m.PassNumber).Name("Пропуск");
     }
-}
 }

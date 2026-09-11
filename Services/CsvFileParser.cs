@@ -1,4 +1,4 @@
-using CsvHelper;
+﻿using CsvHelper;
 using CsvHelper.Configuration;
 using CsvHelper.TypeConversion;
 using System.Globalization;
@@ -46,5 +46,4 @@ public class CsvFileParser : IFileParser
             return null;
         }
     }
-}
 }

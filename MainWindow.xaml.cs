@@ -1,4 +1,4 @@
-using LogGate.ViewModels;
+﻿using LogGate.ViewModels;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Threading;
@@ -66,5 +66,4 @@ public partial class MainWindow : Window
         if (DataContext is MainViewModel viewModel)
             viewModel.Cleanup();
     }
-}
 }

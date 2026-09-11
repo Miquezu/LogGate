@@ -1,4 +1,4 @@
-namespace LogGate.Interfaces;
+﻿namespace LogGate.Interfaces;
 
 public interface IDataRepository
 {
@@ -21,5 +21,4 @@ public interface IDataRepository
     Task SaveWorkRulesAsync(IEnumerable<WorkScheduleRule> rules);
 
     Task UpdateItemsNotesAsync(IEnumerable<DataItem> items);
-}
 }

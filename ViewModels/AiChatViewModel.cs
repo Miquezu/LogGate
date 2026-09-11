@@ -199,4 +199,3 @@ public partial class AiChatViewModel : ObservableObject
         public string Text { get; set; } = string.Empty;
     }
 }
-}

@@ -1,4 +1,4 @@
-using MaterialDesignThemes.Wpf;
+﻿using MaterialDesignThemes.Wpf;
 using System.Diagnostics;
 
 namespace LogGate.ViewModels;
@@ -309,5 +309,4 @@ public partial class EmployeeCardViewModel : ObservableObject
             SnackbarMessageQueue.Enqueue($"Ошибка загрузки данных сотрудника: {ex.Message}");
         }
     }
-}
 }

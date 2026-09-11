@@ -1,4 +1,4 @@
-using LogGate.DataAccess;
+﻿using LogGate.DataAccess;
 using LogGate.Services;
 using LogGate.ViewModels;
 using Microsoft.EntityFrameworkCore;
@@ -92,5 +92,4 @@ public partial class App : Application
         var mainWindow = AppHost.Services.GetRequiredService<MainWindow>();
         mainWindow.Show();
     }
-}
 }

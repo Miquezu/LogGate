@@ -1,4 +1,4 @@
-using LogGate.ViewModels;
+﻿using LogGate.ViewModels;
 using System.Collections.Specialized;
 using System.Windows;
 using System.Windows.Input;
@@ -29,5 +29,4 @@ public partial class AiChatWindow : Window
         ChatScrollViewer.ScrollToVerticalOffset(ChatScrollViewer.VerticalOffset - e.Delta);
         e.Handled = true;
     }
-}
 }

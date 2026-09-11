@@ -1,4 +1,4 @@
-using System.Net.Http;
+﻿using System.Net.Http;
 
 namespace LogGate.Services;
 
@@ -39,5 +39,4 @@ public class CalendarService(ILogger<CalendarService>? logger = null) : ICalenda
 
         return preHolidays;
     }
-}
 }

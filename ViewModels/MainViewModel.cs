@@ -1,4 +1,4 @@
-using LiveChartsCore;
+﻿using LiveChartsCore;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Painting;
 using LogGate.Services;
@@ -761,5 +761,4 @@ public partial class MainViewModel : ObservableObject
         var pagedData = sorted.Skip((CurrentPage - 1) * PageSize).Take(PageSize).ToList();
         DataItems = [.. pagedData];
     }
-}
 }

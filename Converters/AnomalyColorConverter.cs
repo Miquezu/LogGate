@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
@@ -7,13 +7,10 @@ namespace LogGate.Converters;
 
 public class AnomalyColorConverter : IValueConverter
 {
-    private static Brush? _warningTempBrush;
     private static Brush? _dangerAlcoBrush;
-    private static Brush? _warningLateBrush;
     private static Brush? _warningEarlyBrush;
-
-    private static Brush? GetBrush(ref Brush? cached, string resourceKey) =>
-        cached ??= Application.Current?.TryFindResource(resourceKey) as Brush;
+    private static Brush? _warningLateBrush;
+    private static Brush? _warningTempBrush;
 
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
@@ -36,5 +33,7 @@ public class AnomalyColorConverter : IValueConverter
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
         throw new NotSupportedException();
-}
+
+    private static Brush? GetBrush(ref Brush? cached, string resourceKey) =>
+                cached ??= Application.Current?.TryFindResource(resourceKey) as Brush;
 }

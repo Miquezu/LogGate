@@ -1,4 +1,4 @@
-using MaterialDesignThemes.Wpf;
+﻿using MaterialDesignThemes.Wpf;
 
 namespace LogGate.ViewModels;
 
@@ -138,5 +138,4 @@ public partial class ScheduleSettingsViewModel : ObservableObject
             SnackbarMessageQueue.Enqueue($"Ошибка при сохранении: {ex.Message}");
         }
     }
-}
 }

@@ -1,4 +1,4 @@
-using LogGate.ViewModels;
+﻿using LogGate.ViewModels;
 using System.Windows;
 
 namespace LogGate;
@@ -13,5 +13,4 @@ public partial class EmployeeCardWindow : Window
         InitializeComponent();
         DataContext = viewModel;
     }
-}
 }

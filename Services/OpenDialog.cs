@@ -1,4 +1,4 @@
-using LogGate.ViewModels;
+﻿using LogGate.ViewModels;
 using LogGate.Views;
 using MaterialDesignThemes.Wpf;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,14 +29,6 @@ public class OpenDialog(IServiceProvider services) : IDialogService
         window.Show();
     }
 
-    public bool? OpenScheduleSettings()
-    {
-        var viewModel = ActivatorUtilities.CreateInstance<ScheduleSettingsViewModel>(services);
-        var window = new ScheduleSettingsWindow(viewModel);
-        SetOwner(window);
-        return window.ShowDialog();
-    }
-
     public string? OpenFileDialog()
     {
         var dialog = new OpenFileDialog
@@ -45,6 +37,14 @@ public class OpenDialog(IServiceProvider services) : IDialogService
             Filter = "CSV files(*.csv)|*.csv|All files(*.*)|*.*"
         };
         return dialog.ShowDialog() == true ? dialog.FileName : null;
+    }
+
+    public bool? OpenScheduleSettings()
+    {
+        var viewModel = ActivatorUtilities.CreateInstance<ScheduleSettingsViewModel>(services);
+        var window = new ScheduleSettingsWindow(viewModel);
+        SetOwner(window);
+        return window.ShowDialog();
     }
 
     public string? SaveFileDialog(string defaultFileName, string filter = "CSV files (*.csv)|*.csv|All files (*.*)|*.*")
@@ -66,11 +66,11 @@ public class OpenDialog(IServiceProvider services) : IDialogService
     public void ShowMessage(string message, string title = "Уведомление") =>
         SafeEnqueue(() => SnackbarMessageQueue.Enqueue(message));
 
-    public void ShowWarning(string message, string title = "Внимание") =>
-        SafeEnqueue(() => SnackbarMessageQueue.Enqueue(message));
-
     public void ShowMessageWithAction(string message, string actionText, Action actionHandler) =>
         SafeEnqueue(() => SnackbarMessageQueue.Enqueue(message, actionText, actionHandler));
+
+    public void ShowWarning(string message, string title = "Внимание") =>
+            SafeEnqueue(() => SnackbarMessageQueue.Enqueue(message));
 
     private static void SafeEnqueue(Action action)
     {
@@ -91,5 +91,4 @@ public class OpenDialog(IServiceProvider services) : IDialogService
             window.Owner = mainWindow;
         }
     }
-}
 }

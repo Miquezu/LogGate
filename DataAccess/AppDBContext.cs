@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 
 namespace LogGate.DataAccess;
 
@@ -21,5 +21,4 @@ internal class AppDBContext(DbContextOptions<AppDBContext> options) : DbContext(
         modelBuilder.Entity<DataItem>()
             .HasIndex(x => new { x.FullName, x.EventTime });
     }
-}
 }

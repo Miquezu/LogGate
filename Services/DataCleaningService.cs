@@ -1,4 +1,4 @@
-namespace LogGate.Services;
+﻿namespace LogGate.Services;
 
 /// <summary>
 /// Интеллектуальный сервис очистки и коррекции аномалий сырых логов СКУД.
@@ -140,5 +140,4 @@ public class DataCleaningService : IDataCleaningService
             target.AlcotestTime = source.AlcotestTime;
         }
     }
-}
 }

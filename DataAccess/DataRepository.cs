@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 
 namespace LogGate.DataAccess;
 
@@ -8,6 +8,18 @@ internal class DataRepository(IDbContextFactory<AppDBContext> contextFactory) : 
     {
         await using var context = await contextFactory.CreateDbContextAsync();
         return await context.WorkScheduleRules.AsNoTracking().ToListAsync();
+    }
+
+    public async Task<List<string>> GetDepartmentsAsync()
+    {
+        await using var context = await contextFactory.CreateDbContextAsync();
+        return await context.DataItems
+            .AsNoTracking()
+            .Where(x => !string.IsNullOrEmpty(x.Department))
+            .Select(x => x.Department!)
+            .Distinct()
+            .OrderBy(x => x)
+            .ToListAsync();
     }
 
     public async Task<List<DataItem>> GetEmployeeHistoryAsync(string employeeName)
@@ -47,18 +59,6 @@ internal class DataRepository(IDbContextFactory<AppDBContext> contextFactory) : 
             query = query.Where(x => x.EventTime <= endDate.Value.AddDays(1).AddTicks(-1));
 
         return await query.ToListAsync();
-    }
-
-    public async Task<List<string>> GetDepartmentsAsync()
-    {
-        await using var context = await contextFactory.CreateDbContextAsync();
-        return await context.DataItems
-            .AsNoTracking()
-            .Where(x => !string.IsNullOrEmpty(x.Department))
-            .Select(x => x.Department!)
-            .Distinct()
-            .OrderBy(x => x)
-            .ToListAsync();
     }
 
     public async Task<List<DateTime>> GetShortenedDaysByYearAsync(int year)
@@ -190,5 +190,4 @@ internal class DataRepository(IDbContextFactory<AppDBContext> contextFactory) : 
 
         await context.SaveChangesAsync();
     }
-}
 }
