@@ -365,3 +365,4 @@ FodyWeavers.xsd
 /CodeParser.ps1
 /MergedProjectCode.txt
 /appsettings.json
+*.zip
