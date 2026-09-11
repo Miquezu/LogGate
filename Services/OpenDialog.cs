@@ -1,4 +1,4 @@
-﻿using LogGate.Interfaces;
+using LogGate.Interfaces;
 using LogGate.ViewModels;
 using LogGate.Views;
 using Microsoft.Win32;
@@ -28,6 +28,20 @@ namespace LogGate.Services
             {
                 Title = "Выберите .csv файл",
                 Filter = "CSV files(*.csv)|*.csv|All files(*.*)|*.*"
+            };
+            bool? result = dialog.ShowDialog();
+            return result == true ? dialog.FileName : null;
+        }
+
+        public string? SaveFileDialog(string defaultFileName, string filter = "CSV files (*.csv)|*.csv|All files (*.*)|*.*")
+        {
+            var dialog = new SaveFileDialog
+            {
+                Title = "Экспорт данных",
+                FileName = defaultFileName,
+                Filter = filter,
+                DefaultExt = ".csv",
+                AddExtension = true
             };
             bool? result = dialog.ShowDialog();
             return result == true ? dialog.FileName : null;

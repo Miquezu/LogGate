@@ -26,6 +26,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IDashboardService _dashboardService;
     private readonly IDataRepository _dataRepository;
     private readonly IDialogService _dialogService;
+    private readonly IExportService _exportService;
     private readonly IFileParser _fileParser;
     private readonly IScheduleService _scheduleService;
 
@@ -155,7 +156,8 @@ public partial class MainViewModel : ObservableObject
         AiReportManager aiReportManager,
         IScheduleService scheduleService,
         AutoImportService autoImportService,
-        IDashboardService dashboardService)
+        IDashboardService dashboardService,
+        IExportService exportService)
     {
         _fileParser = fileParser;
         _cleaningService = cleaningService;
@@ -165,6 +167,7 @@ public partial class MainViewModel : ObservableObject
         _scheduleService = scheduleService;
         _autoImportService = autoImportService;
         _dashboardService = dashboardService;
+        _exportService = exportService;
 
         _autoImportService.DataImported += OnAutoDataImported;
         _autoImportService.ImportError += OnAutoImportError;
@@ -514,6 +517,34 @@ public partial class MainViewModel : ObservableObject
         {
             StatusMessage = "Загрузка завершена. Файл не содержал новых данных.";
             _dialogService.ShowMessage("Все записи из этого файла уже есть в базе данных.");
+        }
+    }
+
+    [RelayCommand]
+    private async Task ExportDataAsync()
+    {
+        if (_filteredCache.Count == 0)
+        {
+            _dialogService.ShowWarning("Нет данных для экспорта с текущими параметрами фильтрации.");
+            return;
+        }
+
+        var defaultFileName = $"Отчет_СКУД_{DateTime.Now:yyyy-MM-dd_HH-mm}.csv";
+        var filePath = _dialogService.SaveFileDialog(defaultFileName);
+        if (string.IsNullOrEmpty(filePath))
+            return;
+
+        try
+        {
+            StatusMessage = $"Экспорт данных ({_filteredCache.Count} записей)...";
+            await _exportService.ExportToCsvAsync(_filteredCache, filePath);
+            StatusMessage = $"Экспорт успешно завершен ({_filteredCache.Count} записей).";
+            _dialogService.ShowMessage($"Успешно экспортировано {_filteredCache.Count} записей в файл:\n{Path.GetFileName(filePath)}", "Экспорт отчета");
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "Ошибка при экспорте данных!";
+            _dialogService.ShowError($"Не удалось экспортировать данные:\n{ex.Message}");
         }
     }
 

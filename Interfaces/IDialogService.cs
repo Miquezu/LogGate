@@ -1,4 +1,4 @@
-﻿using LogGate.ViewModels;
+using LogGate.ViewModels;
 
 namespace LogGate.Interfaces
 {
@@ -9,6 +9,8 @@ namespace LogGate.Interfaces
         void OpenEmployeeCard(EmployeeCardViewModel viewModel);
 
         string? OpenFileDialog();
+
+        string? SaveFileDialog(string defaultFileName, string filter = "CSV files (*.csv)|*.csv|All files (*.*)|*.*");
 
         bool? OpenScheduleSettings(ScheduleSettingsViewModel viewModel);
 

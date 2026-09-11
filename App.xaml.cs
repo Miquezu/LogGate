@@ -51,6 +51,7 @@ namespace LogGate
                     services.AddSingleton<IDashboardService, DashboardService>();
                     services.AddSingleton<IAiAnalyzerService, AiAnalyzerService>();
                     services.AddTransient<AiReportManager>();
+                    services.AddSingleton<IExportService, CsvExportService>();
 
                     // 3. ViewModels и представления
                     services.AddTransient<MainViewModel>();

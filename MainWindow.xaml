@@ -211,6 +211,26 @@
                         </Button>
 
                         <Button
+                            Margin="0,0,10,0"
+                            Height="36"
+                            Command="{Binding ExportDataCommand}"
+                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                            BorderBrush="#5E35B1"
+                            Foreground="#5E35B1"
+                            ToolTip="Экспортировать текущую выборку в CSV-файл (для Excel)">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon
+                                    Width="16"
+                                    Height="16"
+                                    Margin="0,0,6,0"
+                                    VerticalAlignment="Center"
+                                    Foreground="#5E35B1"
+                                    Kind="FileExportOutline" />
+                                <TextBlock VerticalAlignment="Center" FontWeight="Medium" Text="Экспорт" />
+                            </StackPanel>
+                        </Button>
+
+                        <Button
                             Height="36"
                             Command="{Binding LoadDataCommand}"
                             Style="{StaticResource MaterialDesignRaisedButton}"
