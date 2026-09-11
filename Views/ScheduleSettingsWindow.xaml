@@ -11,6 +11,7 @@
     Height="620"
     MinWidth="800"
     MinHeight="540"
+    Icon="/Assets/app_icon.ico"
     Background="#F5F6F8"
     Style="{StaticResource MaterialDesignWindow}"
     WindowStartupLocation="CenterOwner"

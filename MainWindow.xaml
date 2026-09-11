@@ -11,6 +11,7 @@
     Title="Учет времени — Сводка"
     Width="1200"
     Height="600"
+    Icon="/Assets/app_icon.ico"
     Background="#F5F6F8"
     Closed="Window_Closed"
     Style="{StaticResource MaterialDesignWindow}"
