@@ -1,9 +1,13 @@
 using LogGate.ViewModels;
+using MaterialDesignThemes.Wpf;
+using System;
 
 namespace LogGate.Interfaces
 {
     public interface IDialogService
     {
+        ISnackbarMessageQueue SnackbarMessageQueue { get; }
+
         void OpenAiChat(AiChatViewModel viewModel);
 
         void OpenEmployeeCard(EmployeeCardViewModel viewModel);
@@ -19,5 +23,7 @@ namespace LogGate.Interfaces
         void ShowMessage(string message, string title = "Уведомление");
 
         void ShowWarning(string message, string title = "Внимание");
+
+        void ShowMessageWithAction(string message, string actionText, Action actionHandler);
     }
 }

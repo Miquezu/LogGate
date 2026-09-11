@@ -3,12 +3,15 @@ using CommunityToolkit.Mvvm.Input;
 using LogGate.Interfaces;
 using LogGate.Models;
 using LogGate.Services;
+using MaterialDesignThemes.Wpf;
 using System.Collections.ObjectModel;
 
 namespace LogGate.ViewModels
 {
     public partial class ScheduleSettingsViewModel : ObservableObject
     {
+        public ISnackbarMessageQueue SnackbarMessageQueue { get; } = new SnackbarMessageQueue(System.TimeSpan.FromSeconds(3.5));
+
         private readonly IDataRepository _dataRepository;
         private readonly IDialogService _dialogService;
         private readonly IScheduleService _scheduleService;
@@ -67,7 +70,7 @@ namespace LogGate.ViewModels
         {
             if (string.IsNullOrWhiteSpace(NewTargetName) || !NewStartTime.HasValue || !NewEndTime.HasValue)
             {
-                _dialogService.ShowMessage("Пожалуйста, заполните все поля.");
+                SnackbarMessageQueue.Enqueue("Пожалуйста, заполните все обязательные поля.");
                 return;
             }
 
@@ -83,6 +86,7 @@ namespace LogGate.ViewModels
             Rules.Add(rule);
             NewTargetName = string.Empty; // Очищаем поле после добавления
             UpdateRulesState();
+            SnackbarMessageQueue.Enqueue($"Правило для «{rule.TargetName}» добавлено в список.");
         }
 
         [RelayCommand]
@@ -93,6 +97,7 @@ namespace LogGate.ViewModels
             {
                 Rules.Remove(target);
                 UpdateRulesState();
+                SnackbarMessageQueue.Enqueue($"Правило «{target.TargetName}» удалено.");
             }
         }
 
@@ -119,11 +124,11 @@ namespace LogGate.ViewModels
 
                 _scheduleService.UpdateRules(rulesList, _scheduleService.PreHolidays);
 
-                _dialogService.ShowMessage("Настройки графиков успешно сохранены!");
+                SnackbarMessageQueue.Enqueue("Настройки графиков успешно сохранены!");
             }
             catch (Exception ex)
             {
-                _dialogService.ShowMessage($"Ошибка при сохранении: {ex.Message}");
+                SnackbarMessageQueue.Enqueue($"Ошибка при сохранении: {ex.Message}");
             }
         }
     }

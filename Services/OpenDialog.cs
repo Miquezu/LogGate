@@ -1,13 +1,17 @@
 using LogGate.Interfaces;
 using LogGate.ViewModels;
 using LogGate.Views;
+using MaterialDesignThemes.Wpf;
 using Microsoft.Win32;
+using System;
 using System.Windows;
 
 namespace LogGate.Services
 {
     public class OpenDialog : IDialogService
     {
+        public ISnackbarMessageQueue SnackbarMessageQueue { get; } = new SnackbarMessageQueue(TimeSpan.FromSeconds(3.5));
+
         public void OpenAiChat(AiChatViewModel viewModel)
         {
             var window = new AiChatWindow(viewModel);
@@ -55,13 +59,28 @@ namespace LogGate.Services
         }
 
         public void ShowError(string message, string title = "Ошибка") =>
-            MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Error);
+            SafeEnqueue(() => SnackbarMessageQueue.Enqueue(message));
 
         public void ShowMessage(string message, string title = "Уведомление") =>
-                            MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Information);
+            SafeEnqueue(() => SnackbarMessageQueue.Enqueue(message));
 
         public void ShowWarning(string message, string title = "Внимание") =>
-            MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Warning);
+            SafeEnqueue(() => SnackbarMessageQueue.Enqueue(message));
+
+        public void ShowMessageWithAction(string message, string actionText, Action actionHandler) =>
+            SafeEnqueue(() => SnackbarMessageQueue.Enqueue(message, actionText, actionHandler));
+
+        private static void SafeEnqueue(Action action)
+        {
+            if (Application.Current?.Dispatcher == null || Application.Current.Dispatcher.CheckAccess())
+            {
+                action();
+            }
+            else
+            {
+                Application.Current.Dispatcher.BeginInvoke(action);
+            }
+        }
 
         private static void SetOwner(Window window)
         {

@@ -108,6 +108,8 @@ namespace LogGate.ViewModels
             LoadEmployeeData();
         }
 
+        public MaterialDesignThemes.Wpf.ISnackbarMessageQueue SnackbarMessageQueue { get; } = new MaterialDesignThemes.Wpf.SnackbarMessageQueue(System.TimeSpan.FromSeconds(3.5));
+
         [CommunityToolkit.Mvvm.Input.RelayCommand]
         private void SwitchToHistory() => IsTimesheetView = false;
 
@@ -119,7 +121,7 @@ namespace LogGate.ViewModels
         {
             if (DailyRecords.Count == 0 && EmployeeHistory.Count == 0)
             {
-                _dialogService?.ShowWarning("Нет данных для экспорта по данному сотруднику.");
+                SnackbarMessageQueue.Enqueue("Нет данных для экспорта по данному сотруднику.");
                 return;
             }
 
@@ -143,11 +145,22 @@ namespace LogGate.ViewModels
                     DailyRecords,
                     filePath);
 
-                _dialogService?.ShowMessage($"Табель сотрудника успешно экспортирован в файл:\n{System.IO.Path.GetFileName(filePath)}", "Экспорт завершён");
+                var fileName = System.IO.Path.GetFileName(filePath);
+                SnackbarMessageQueue.Enqueue(
+                    $"Табель успешно экспортирован: {fileName}",
+                    "ОТКРЫТЬ",
+                    () =>
+                    {
+                        try
+                        {
+                            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", $"/select,\"{filePath}\"") { UseShellExecute = true });
+                        }
+                        catch { }
+                    });
             }
             catch (System.Exception ex)
             {
-                _dialogService?.ShowError($"Ошибка при экспорте табеля:\n{ex.Message}");
+                SnackbarMessageQueue.Enqueue($"Ошибка при экспорте: {ex.Message}");
             }
         }
 
@@ -156,7 +169,7 @@ namespace LogGate.ViewModels
         {
             if (DailyRecords.Count == 0 && EmployeeHistory.Count == 0)
             {
-                _dialogService?.ShowWarning("Нет данных для печати досье сотрудника.");
+                SnackbarMessageQueue.Enqueue("Нет данных для печати досье сотрудника.");
                 return;
             }
 
@@ -176,12 +189,12 @@ namespace LogGate.ViewModels
 
                 if (printed)
                 {
-                    _dialogService?.ShowMessage("Документ успешно отправлен на печать.", "Печать досье");
+                    SnackbarMessageQueue.Enqueue("Документ успешно отправлен на печать.");
                 }
             }
             catch (System.Exception ex)
             {
-                _dialogService?.ShowError($"Ошибка при отправке на печать:\n{ex.Message}");
+                SnackbarMessageQueue.Enqueue($"Ошибка при печати: {ex.Message}");
             }
         }
 

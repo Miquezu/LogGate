@@ -1051,5 +1051,14 @@
                 </StackPanel>
             </StatusBarItem>
         </StatusBar>
+
+        <!-- Всплывающие неблокирующие уведомления (Material Design Snackbar) -->
+        <materialDesign:Snackbar
+            Grid.Row="1"
+            Grid.RowSpan="2"
+            Margin="0,0,0,38"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Bottom"
+            MessageQueue="{Binding SnackbarMessageQueue}" />
     </Grid>
 </Window>

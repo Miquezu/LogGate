@@ -1297,5 +1297,13 @@
                 </DataGrid>
             </Grid>
         </materialDesign:Card>
+
+        <!-- Всплывающие неблокирующие уведомления (Material Design Snackbar) -->
+        <materialDesign:Snackbar
+            Grid.Row="2"
+            Margin="0,0,0,16"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Bottom"
+            MessageQueue="{Binding SnackbarMessageQueue}" />
     </Grid>
 </Window>

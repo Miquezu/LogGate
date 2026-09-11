@@ -6,6 +6,7 @@ using LiveChartsCore.SkiaSharpView.Painting;
 using LogGate.Interfaces;
 using LogGate.Models;
 using LogGate.Services;
+using MaterialDesignThemes.Wpf;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
@@ -20,6 +21,8 @@ namespace LogGate.ViewModels;
 
 public partial class MainViewModel : ObservableObject
 {
+    public ISnackbarMessageQueue SnackbarMessageQueue => _dialogService.SnackbarMessageQueue;
+
     private readonly AiReportManager _aiReportManager;
     private readonly AutoImportService _autoImportService;
     private readonly IDataCleaningService _cleaningService;
@@ -585,7 +588,18 @@ public partial class MainViewModel : ObservableObject
             StatusMessage = $"Экспорт данных ({_filteredCache.Count} записей)...";
             await _exportService.ExportToCsvAsync(_filteredCache, filePath);
             StatusMessage = $"Экспорт успешно завершен ({_filteredCache.Count} записей).";
-            _dialogService.ShowMessage($"Успешно экспортировано {_filteredCache.Count} записей в файл:\n{Path.GetFileName(filePath)}", "Экспорт отчета");
+            var fileName = Path.GetFileName(filePath);
+            _dialogService.ShowMessageWithAction(
+                $"Экспортировано {_filteredCache.Count} записей: {fileName}",
+                "ОТКРЫТЬ",
+                () =>
+                {
+                    try
+                    {
+                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", $"/select,\"{filePath}\"") { UseShellExecute = true });
+                    }
+                    catch { }
+                });
         }
         catch (Exception ex)
         {
